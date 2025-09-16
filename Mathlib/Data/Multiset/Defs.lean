@@ -8,6 +8,7 @@ import Mathlib.Data.Quot
 import Mathlib.Order.Monotone.Defs
 import Mathlib.Order.RelClasses
 import Mathlib.Tactic.Monotonicity.Attr
+import Mathlib.Tactic.ToAdditive
 import Mathlib.Util.AssertExists
 
 /-!
@@ -63,6 +64,7 @@ variable {α : Type*} {β : Type v} {γ : Type*}
 
 /-- `Multiset α` is the quotient of `List α` by list permutation. The result
   is a type of finite sets with duplicates allowed. -/
+@[to_additive_dont_translate]
 def Multiset.{u} (α : Type u) : Type u :=
   Quotient (List.isSetoid α)
 

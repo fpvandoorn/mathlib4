@@ -23,6 +23,7 @@ universe u v w
 variable {G G' α β : Type*}
 
 namespace Function.Embedding
+attribute [to_additive_ignore_args 1] Function.Embedding
 
 @[to_additive]
 instance smul [Group G] [MulAction G β] : SMul G (α ↪ β) :=

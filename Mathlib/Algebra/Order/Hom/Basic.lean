@@ -227,7 +227,7 @@ theorem abs_sub_map_le_div [Group α] [AddCommGroup β] [LinearOrder β] [IsOrde
   exact ⟨le_map_add_map_div _ _ _, le_map_add_map_div' _ _ _⟩
 
 -- See note [lower instance priority]
-@[to_additive]
+@[to_additive (dont_translate := β)]
 instance (priority := 100) GroupSeminormClass.toNonnegHomClass [Group α]
     [AddCommMonoid β] [LinearOrder β] [IsOrderedAddMonoid β] [GroupSeminormClass F α β] :
     NonnegHomClass F α β :=

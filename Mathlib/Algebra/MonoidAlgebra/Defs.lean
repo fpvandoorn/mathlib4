@@ -285,17 +285,17 @@ instance smulZeroClass [Semiring k] [SMulZeroClass R k] : SMulZeroClass R (Monoi
 instance distribSMul [Semiring k] [DistribSMul R k] : DistribSMul R (MonoidAlgebra k G) :=
   Finsupp.distribSMul _ _
 
-@[to_additive (dont_translate := R) isScalarTower]
+@[to_additive (dont_translate := S) isScalarTower]
 instance isScalarTower [Semiring k] [SMulZeroClass R k] [SMulZeroClass S k] [SMul R S]
     [IsScalarTower R S k] : IsScalarTower R S (MonoidAlgebra k G) :=
   Finsupp.isScalarTower G k
 
-@[to_additive (dont_translate := R) smulCommClass]
+@[to_additive (dont_translate := k) smulCommClass]
 instance smulCommClass [Semiring k] [SMulZeroClass R k] [SMulZeroClass S k] [SMulCommClass R S k] :
     SMulCommClass R S (MonoidAlgebra k G) :=
   Finsupp.smulCommClass G k
 
-@[to_additive (dont_translate := R) isCentralScalar]
+@[to_additive (dont_translate := R k) isCentralScalar]
 instance isCentralScalar [Semiring k] [SMulZeroClass R k] [SMulZeroClass Rᵐᵒᵖ k]
     [IsCentralScalar R k] : IsCentralScalar R (MonoidAlgebra k G) :=
   Finsupp.isCentralScalar G k
@@ -398,11 +398,11 @@ instance commRing [CommRing k] [CommMonoid G] : CommRing (MonoidAlgebra k G) :=
 
 end DerivedInstances
 
-@[to_additive (dont_translate := R) (attr := simp) smul_apply]
+@[to_additive (dont_translate := S) (attr := simp) smul_apply]
 lemma smul_apply [Semiring S] [SMulZeroClass R S] (r : R) (m : M) (x : MonoidAlgebra S M) :
     (r • x) m = r • x m := rfl
 
-@[to_additive (dont_translate := R) (attr := simp) smul_single]
+@[to_additive (dont_translate := k) (attr := simp) smul_single]
 theorem smul_single [Semiring k] [SMulZeroClass R k] (a : G) (c : R) (b : k) :
     c • single a b = single a (c • b) :=
   Finsupp.smul_single _ _ _

@@ -61,19 +61,20 @@ class VSub (G : outParam Type*) (P : Type*) where
   type-dependent, but it is intended to be used for additive torsors. -/
   vsub : P → P → G
 
-attribute [to_additive] SMul
+attribute [to_additive (relevant_arg := 2)] SMul
 attribute [ext] SMul VAdd
 
 @[inherit_doc] infixr:65 " +ᵥ " => HVAdd.hVAdd
 @[inherit_doc] infixl:65 " -ᵥ " => VSub.vsub
 
-attribute [to_additive existing] Mul Div HMul instHMul HDiv instHDiv HSMul
+attribute [to_additive existing] Mul Div HMul instHMul HDiv instHDiv
+attribute [to_additive existing (relevant_arg := 2)] HSMul
 attribute [to_additive (reorder := 1 2) SMul] Pow
 attribute [to_additive (reorder := 1 2)] HPow
 attribute [to_additive existing (reorder := 1 2, 5 6) hSMul] HPow.hPow
 attribute [to_additive existing (reorder := 1 2, 4 5) smul] Pow.pow
 
-attribute [to_additive (attr := default_instance)] instHSMul
+attribute [to_additive (attr := default_instance) (relevant_arg := 2)] instHSMul
 
 @[to_additive]
 theorem SMul.smul_eq_hSMul {α β} [SMul α β] : (SMul.smul : α → β → β) = HSMul.hSMul := rfl

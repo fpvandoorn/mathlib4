@@ -71,6 +71,7 @@ def germSetoid (l : Filter α) (β : Type*) : Setoid (α → β) where
   iseqv := ⟨EventuallyEq.refl _, EventuallyEq.symm, EventuallyEq.trans⟩
 
 /-- The space of germs of functions `α → β` at a filter `l`. -/
+@[to_additive_ignore_args 2]
 def Germ (l : Filter α) (β : Type*) : Type _ :=
   Quotient (germSetoid l β)
 

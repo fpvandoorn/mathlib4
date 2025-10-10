@@ -288,7 +288,7 @@ lemma ofHasFDerivAt
         congr! with x
         by_cases hx : x ∈ interior s; swap
         · have h1 : ϕ =ᶠ[𝓝 x] 0 := by
-            rw [← not_mem_tsupport_iff_eventuallyEq]
+            rw [← notMem_tsupport_iff_eventuallyEq]
             exact fun a ↦ hx (h3ϕ a)
           have h2 : fderiv ℝ ϕ x = 0 := by
             rw [h1.fderiv_eq, fderiv_zero_apply]
@@ -298,7 +298,7 @@ lemma ofHasFDerivAt
             calc (fun x ↦ ϕ x • f x) =ᶠ[𝓝 x] (fun x ↦ (0 : E → ℝ) x • f x) := h1.smul .rfl
               _ =ᶠ[𝓝 x] (fun x ↦ 0) := by simp
           simp [← smulRightL_apply, h1.self_of_nhds, h2, h3]
-        rw [fderiv_smul (hϕ.contDiffAt.differentiableAt le_top) (hf x hx).differentiableAt,
+        rw [fderiv_fun_smul (hϕ.contDiffAt.differentiableAt le_top) (hf x hx).differentiableAt,
           hf x hx |>.fderiv]
         exact h0f'.integrable_of_continuousOn_smul isOpen_interior hϕ.continuous h2ϕ h3ϕ
         exact h0f.integrable_of_continuousOn_smulRight isOpen_interior

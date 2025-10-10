@@ -53,7 +53,7 @@ section case1
 open ZMod
 
 private lemma cube_of_castHom_ne_zero {n : ZMod 9} :
-    castHom (show 3 ∣ 9 by norm_num) (ZMod 3) n ≠ 0 → n ^ 3 = 1 ∨ n ^ 3 = 8 := by
+    castHom (show 3 ∣ 9 by simp) (ZMod 3) n ≠ 0 → n ^ 3 = 1 ∨ n ^ 3 = 8 := by
   revert n; decide
 
 private lemma cube_of_not_dvd {n : ℤ} (h : ¬ 3 ∣ n) :
@@ -85,7 +85,7 @@ private lemma three_dvd_b_of_dvd_a_of_gcd_eq_one_of_case2 {a b c : ℤ} (ha : a 
     rw [add_comm (a ^ 3), add_assoc, add_comm (a ^ 3), ← add_assoc] at HF
     refine isCoprime_of_gcd_eq_one_of_FLT ?_ HF
     convert Hgcd using 2
-    rw [Finset.pair_comm, Finset.Insert.comm]
+    rw [Finset.pair_comm, Finset.insert_comm]
   by_contra! h3b
   by_cases h3c : 3 ∣ c
   · apply h3b
@@ -108,7 +108,7 @@ private lemma fermatLastTheoremThree_of_dvd_a_of_gcd_eq_one_of_case2 {a b c : �
   simp only [mem_insert, mem_singleton] at hx
   have h3b : 3 ∣ b := by
     refine three_dvd_b_of_dvd_a_of_gcd_eq_one_of_case2 ha ?_ h3a HF H
-    simp only [← Hgcd, gcd_insert, gcd_singleton, id_eq, ← Int.abs_eq_normalize, abs_neg]
+    simp only [← Hgcd, gcd_insert, gcd_singleton, id_eq, ← Int.abs_eq_normalize]
   rcases hx with hx | hx | hx
   · exact hx ▸ h3a
   · exact hx ▸ h3b
@@ -116,9 +116,9 @@ private lemma fermatLastTheoremThree_of_dvd_a_of_gcd_eq_one_of_case2 {a b c : �
 
 open Finset Int in
 /--
-  To prove Fermat's Last Theorem for `n = 3`, it is enough to show that that for all `a`, `b`, `c`
-  in `ℤ` such that `c ≠ 0`, `¬ 3 ∣ a`, `¬ 3 ∣ b`, `a` and `b` are coprime and `3 ∣ c`, we have
-  `a ^ 3 + b ^ 3 ≠ c ^ 3`.
+To prove Fermat's Last Theorem for `n = 3`, it is enough to show that for all `a`, `b`, `c`
+in `ℤ` such that `c ≠ 0`, `¬ 3 ∣ a`, `¬ 3 ∣ b`, `a` and `b` are coprime and `3 ∣ c`, we have
+`a ^ 3 + b ^ 3 ≠ c ^ 3`.
 -/
 theorem fermatLastTheoremThree_of_three_dvd_only_c
     (H : ∀ a b c : ℤ, c ≠ 0 → ¬ 3 ∣ a → ¬ 3 ∣ b  → 3 ∣ c → IsCoprime a b → a ^ 3 + b ^ 3 ≠ c ^ 3) :
@@ -132,22 +132,22 @@ theorem fermatLastTheoremThree_of_three_dvd_only_c
   rw [← sub_eq_zero, sub_eq_add_neg, ← (show Odd 3 by decide).neg_pow] at hF
   rcases h1 with (h3a | h3b) | h3c
   · refine fermatLastTheoremThree_of_dvd_a_of_gcd_eq_one_of_case2 ha h3a ?_ H hF
-    simp only [← Hgcd, Insert.comm, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
+    simp only [← Hgcd, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
   · rw [add_comm (a ^ 3)] at hF
     refine fermatLastTheoremThree_of_dvd_a_of_gcd_eq_one_of_case2 hb h3b ?_ H hF
-    simp only [← Hgcd, Insert.comm, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
+    simp only [← Hgcd, insert_comm, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
   · rw [add_comm _ ((-c) ^ 3), ← add_assoc] at hF
     refine fermatLastTheoremThree_of_dvd_a_of_gcd_eq_one_of_case2 (neg_ne_zero.2 hc) (by simp [h3c])
       ?_ H hF
-    rw [Finset.Insert.comm (-c), Finset.pair_comm (-c) b]
-    simp only [← Hgcd, Insert.comm, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
+    rw [Finset.insert_comm (-c), Finset.pair_comm (-c) b]
+    simp only [← Hgcd, gcd_insert, gcd_singleton, id_eq, ← abs_eq_normalize, abs_neg]
 
 section eisenstein
 
 open NumberField IsCyclotomicExtension.Rat.Three
 
-variable {K : Type*} [Field K] [NumberField K] [IsCyclotomicExtension {3} ℚ K]
-variable {ζ : K} (hζ : IsPrimitiveRoot ζ (3 : ℕ+))
+variable {K : Type*} [Field K]
+variable {ζ : K} (hζ : IsPrimitiveRoot ζ 3)
 
 local notation3 "η" => (IsPrimitiveRoot.isUnit (hζ.toInteger_isPrimitiveRoot) (by decide)).unit
 local notation3 "λ" => hζ.toInteger - 1
@@ -160,7 +160,8 @@ def FermatLastTheoremForThreeGen : Prop :=
     a ^ 3 + b ^ 3 ≠ u * c ^ 3
 
 /-- To prove `FermatLastTheoremFor 3`, it is enough to prove `FermatLastTheoremForThreeGen`. -/
-lemma FermatLastTheoremForThree_of_FermatLastTheoremThreeGen :
+lemma FermatLastTheoremForThree_of_FermatLastTheoremThreeGen
+    [NumberField K] [IsCyclotomicExtension {3} ℚ K] :
     FermatLastTheoremForThreeGen hζ → FermatLastTheoremFor 3 := by
   intro H
   refine fermatLastTheoremThree_of_three_dvd_only_c (fun a b c hc ha hb ⟨x, hx⟩ hcoprime h ↦ ?_)
@@ -201,26 +202,32 @@ structure Solution extends Solution' hζ where
   hab : λ ^ 2 ∣ a + b
 
 variable {hζ}
-variable (S : Solution hζ) (S' : Solution' hζ) [DecidableRel fun (a b : 𝓞 K) ↦ a ∣ b]
+variable (S : Solution hζ) (S' : Solution' hζ)
+
+section IsCyclotomicExtension
+
+variable [NumberField K] [IsCyclotomicExtension {3} ℚ K]
 
 /-- For any `S' : Solution'`, the multiplicity of `λ` in `S'.c` is finite. -/
 lemma Solution'.multiplicity_lambda_c_finite :
-    multiplicity.Finite (hζ.toInteger - 1) S'.c :=
-  multiplicity.finite_of_not_isUnit hζ.zeta_sub_one_prime'.not_unit S'.hc
+    FiniteMultiplicity (hζ.toInteger - 1) S'.c :=
+  .of_not_isUnit hζ.zeta_sub_one_prime'.not_unit S'.hc
 
 /-- Given `S' : Solution'`, `S'.multiplicity` is the multiplicity of `λ` in `S'.c`, as a natural
 number. -/
-def Solution'.multiplicity :=
-  (_root_.multiplicity (hζ.toInteger - 1) S'.c).get (multiplicity_lambda_c_finite S')
+noncomputable def Solution'.multiplicity :=
+  _root_.multiplicity (hζ.toInteger - 1) S'.c
 
 /-- Given `S : Solution`, `S.multiplicity` is the multiplicity of `λ` in `S.c`, as a natural
 number. -/
-def Solution.multiplicity := S.toSolution'.multiplicity
+noncomputable def Solution.multiplicity := S.toSolution'.multiplicity
 
 /-- We say that `S : Solution` is minimal if for all `S₁ : Solution`, the multiplicity of `λ` in
 `S.c` is less or equal than the multiplicity in `S₁.c`. -/
 def Solution.isMinimal : Prop := ∀ (S₁ : Solution hζ), S.multiplicity ≤ S₁.multiplicity
 
+omit [NumberField K] [IsCyclotomicExtension {3} ℚ K] in
+include S in
 /-- If there is a solution then there is a minimal one. -/
 lemma Solution.exists_minimal : ∃ (S₁ : Solution hζ), S₁.isMinimal := by
   classical
@@ -229,7 +236,7 @@ lemma Solution.exists_minimal : ∃ (S₁ : Solution hζ), S₁.isMinimal := by
   exact ⟨S₁, fun S'' ↦ hS₁ ▸ Nat.find_min' _ ⟨S'', rfl⟩⟩
 
 /-- Given `S' : Solution'`, then `S'.a` and `S'.b` are both congruent to `1` modulo `λ ^ 4` or are
-both congruent to `-1`.  -/
+both congruent to `-1`. -/
 lemma a_cube_b_cube_congr_one_or_neg_one :
     λ ^ 4 ∣ S'.a ^ 3 - 1 ∧ λ ^ 4 ∣ S'.b ^ 3 + 1 ∨ λ ^ 4 ∣ S'.a ^ 3 + 1 ∧ λ ^ 4 ∣ S'.b ^ 3 - 1 := by
   obtain ⟨z, hz⟩ := S'.hcdvd
@@ -238,7 +245,7 @@ lemma a_cube_b_cube_congr_one_or_neg_one :
   rcases lambda_pow_four_dvd_cube_sub_one_or_add_one_of_lambda_not_dvd hζ S'.hb with
     ⟨y, hy⟩ | ⟨y, hy⟩
   · exfalso
-    replace hζ : IsPrimitiveRoot ζ ((3 : ℕ+) ^ 1) := by rwa [pow_one]
+    replace hζ : IsPrimitiveRoot ζ (3 ^ 1) := by rwa [pow_one]
     refine hζ.toInteger_sub_one_not_dvd_two (by decide) ⟨S'.u * λ ^ 2 * z ^ 3 - λ ^ 3 * (x + y), ?_⟩
     symm
     calc _ = S'.u * (λ * z) ^ 3 - λ ^ 4 * x - λ ^ 4 * y := by ring
@@ -249,7 +256,7 @@ lemma a_cube_b_cube_congr_one_or_neg_one :
   · right
     exact ⟨⟨x, hx⟩, ⟨y, hy⟩⟩
   · exfalso
-    replace hζ : IsPrimitiveRoot ζ ((3 : ℕ+) ^ 1) := by rwa [pow_one]
+    replace hζ : IsPrimitiveRoot ζ (3 ^ 1) := by rwa [pow_one]
     refine hζ.toInteger_sub_one_not_dvd_two (by decide) ⟨λ ^ 3 * (x + y) - S'.u * λ ^ 2 * z ^ 3, ?_⟩
     symm
     calc _ =  λ ^ 4 * x + λ ^ 4 * y - S'.u * (λ * z) ^ 3 := by ring
@@ -270,28 +277,28 @@ lemma lambda_pow_four_dvd_c_cube : λ ^ 4 ∣ S'.c ^ 3 := by
 /-- Given `S' : Solution'`, we have that `λ ^ 2` divides `S'.c`. -/
 lemma lambda_sq_dvd_c : λ ^ 2 ∣ S'.c := by
   have hm := S'.multiplicity_lambda_c_finite
-  suffices 2 ≤ (multiplicity ((hζ.toInteger - 1)) S'.c).get hm by
-    obtain ⟨x, hx⟩ := multiplicity.pow_multiplicity_dvd hm
-    refine ⟨λ ^ ((multiplicity ((hζ.toInteger - 1)) S'.c).get hm - 2) * x, ?_⟩
+  suffices 2 ≤ multiplicity (hζ.toInteger - 1) S'.c by
+    obtain ⟨x, hx⟩ := pow_multiplicity_dvd (hζ.toInteger - 1) S'.c
+    refine ⟨λ ^ (multiplicity (hζ.toInteger - 1) S'.c - 2) * x, ?_⟩
     rw [← mul_assoc, ← pow_add]
     convert hx using 3
     simp [this]
   have := lambda_pow_four_dvd_c_cube S'
-  have hm1 : (multiplicity (hζ.toInteger - 1) (S'.c ^ 3)).get
-    (multiplicity.finite_pow hζ.zeta_sub_one_prime' hm) =
-    multiplicity (hζ.toInteger - 1) (S'.c ^ 3) := by simp
-  rw [multiplicity.pow_dvd_iff_le_multiplicity, ← hm1, multiplicity.pow' hζ.zeta_sub_one_prime' hm,
-    Nat.cast_ofNat, Nat.ofNat_le_cast] at this
+  rw [pow_dvd_iff_le_emultiplicity, emultiplicity_pow hζ.zeta_sub_one_prime',
+    hm.emultiplicity_eq_multiplicity] at this
+  norm_cast at this
   omega
 
 /-- Given `S' : Solution'`, we have that `2 ≤ S'.multiplicity`. -/
 lemma Solution'.two_le_multiplicity : 2 ≤ S'.multiplicity := by
-  simpa [← PartENat.coe_le_coe, Solution'.multiplicity] using
-    multiplicity.le_multiplicity_of_pow_dvd (lambda_sq_dvd_c S')
+  simpa [Solution'.multiplicity] using
+    S'.multiplicity_lambda_c_finite.le_multiplicity_of_pow_dvd (lambda_sq_dvd_c S')
 
 /-- Given `S : Solution`, we have that `2 ≤ S.multiplicity`. -/
 lemma Solution.two_le_multiplicity : 2 ≤ S.multiplicity :=
   S.toSolution'.two_le_multiplicity
+
+end IsCyclotomicExtension
 
 /-- Given `S' : Solution'`, the key factorization of `S'.a ^ 3 + S'.b ^ 3`. -/
 lemma a_cube_add_b_cube_eq_mul :
@@ -302,35 +309,34 @@ lemma a_cube_add_b_cube_eq_mul :
     simp [hζ.toInteger_cube_eq_one]
   _ = S'.a ^ 3 + S'.b ^ 3 := by rw [eta_sq]; ring
 
-open PartENat in
+section IsCyclotomicExtension
+variable [NumberField K] [IsCyclotomicExtension {3} ℚ K]
+
 /-- Given `S' : Solution'`, we have that `λ ^ 2` divides one amongst `S'.a + S'.b`,
 `S'.a + η * S'.b` and `S'.a + η ^ 2 * S'.b`. -/
 lemma lambda_sq_dvd_or_dvd_or_dvd :
     λ ^ 2 ∣ S'.a + S'.b ∨ λ ^ 2 ∣ S'.a + η * S'.b ∨ λ ^ 2 ∣ S'.a + η ^ 2 * S'.b := by
   by_contra! h
   rcases h with ⟨h1, h2, h3⟩
-  rw [← multiplicity.multiplicity_lt_iff_not_dvd] at h1 h2 h3
-  have h1' : multiplicity.Finite (hζ.toInteger - 1) (S'.a + S'.b) :=
-    multiplicity.ne_top_iff_finite.1 (fun ht ↦ by simp [ht] at h1)
-  have h2' : multiplicity.Finite (hζ.toInteger - 1) (S'.a + η * S'.b) := by
-    refine multiplicity.ne_top_iff_finite.1 (fun ht ↦ ?_)
+  rw [← emultiplicity_lt_iff_not_dvd] at h1 h2 h3
+  have h1' : FiniteMultiplicity (hζ.toInteger - 1) (S'.a + S'.b) :=
+    finiteMultiplicity_iff_emultiplicity_ne_top.2 (fun ht ↦ by simp [ht] at h1)
+  have h2' : FiniteMultiplicity (hζ.toInteger - 1) (S'.a + η * S'.b) := by
+    refine finiteMultiplicity_iff_emultiplicity_ne_top.2 (fun ht ↦ ?_)
     rw [coe_eta] at ht
     simp [ht] at h2
-  have h3' : multiplicity.Finite (hζ.toInteger - 1) (S'.a + η ^ 2 * S'.b) := by
-    refine multiplicity.ne_top_iff_finite.1 (fun ht ↦ ?_)
+  have h3' : FiniteMultiplicity (hζ.toInteger - 1) (S'.a + η ^ 2 * S'.b) := by
+    refine finiteMultiplicity_iff_emultiplicity_ne_top.2 (fun ht ↦ ?_)
     rw [coe_eta] at ht
     simp [ht] at h3
-  replace h1' : (multiplicity (hζ.toInteger - 1) (S'.a + S'.b)).get h1' =
-    multiplicity (hζ.toInteger - 1) (S'.a + S'.b) := by simp
-  replace h2' : (multiplicity (hζ.toInteger - 1) (S'.a + η * S'.b)).get h2' =
-    multiplicity (hζ.toInteger - 1) (S'.a + η * S'.b) := by simp
-  replace h3' : (multiplicity (hζ.toInteger - 1) (S'.a + η ^ 2 * S'.b)).get h3' =
-    multiplicity (hζ.toInteger - 1) (S'.a + η ^ 2 * S'.b) := by simp
-  rw [← h1', coe_lt_coe] at h1; rw [← h2', coe_lt_coe] at h2; rw [← h3', coe_lt_coe] at h3
+  rw [h1'.emultiplicity_eq_multiplicity, Nat.cast_lt] at h1
+  rw [h2'.emultiplicity_eq_multiplicity, Nat.cast_lt] at h2
+  rw [h3'.emultiplicity_eq_multiplicity, Nat.cast_lt] at h3
   have := (pow_dvd_pow_of_dvd (lambda_sq_dvd_c S') 3).mul_left S'.u
-  rw [← pow_mul, ← S'.H, a_cube_add_b_cube_eq_mul, multiplicity.pow_dvd_iff_le_multiplicity,
-    multiplicity.mul hζ.zeta_sub_one_prime', multiplicity.mul hζ.zeta_sub_one_prime', ← h1', ← h2',
-    ← h3', ← Nat.cast_add, ← Nat.cast_add, coe_le_coe] at this
+  rw [← pow_mul, ← S'.H, a_cube_add_b_cube_eq_mul, pow_dvd_iff_le_emultiplicity,
+    emultiplicity_mul hζ.zeta_sub_one_prime', emultiplicity_mul hζ.zeta_sub_one_prime',
+      h1'.emultiplicity_eq_multiplicity, h2'.emultiplicity_eq_multiplicity,
+      h3'.emultiplicity_eq_multiplicity, ← Nat.cast_add, ← Nat.cast_add, Nat.cast_le] at this
   omega
 
 open Units in
@@ -342,7 +348,7 @@ lemma ex_cube_add_cube_eq_and_isCoprime_and_not_dvd_and_dvd :
   rcases lambda_sq_dvd_or_dvd_or_dvd S' with h | h | h
   · exact ⟨S'.a, S'.b, S'.H, S'.coprime, S'.ha, S'.hb, h⟩
   · refine ⟨S'.a, η * S'.b, ?_, ?_, S'.ha, fun ⟨x, hx⟩ ↦ S'.hb ⟨η ^ 2 * x, ?_⟩, h⟩
-    · simp [mul_pow, ← val_pow_eq_pow_val, hζ.toInteger_cube_eq_one, val_one, one_mul, S'.H]
+    · simp [mul_pow, hζ.toInteger_cube_eq_one, one_mul, S'.H]
     · refine (isCoprime_mul_unit_left_right (Units.isUnit η) _ _).2 S'.coprime
     · rw [mul_comm _ x, ← mul_assoc, ← hx, mul_comm _ S'.b, mul_assoc, ← pow_succ', coe_eta,
         hζ.toInteger_cube_eq_one, mul_one]
@@ -370,6 +376,8 @@ lemma exists_Solution_of_Solution' : ∃ (S₁ : Solution hζ), S₁.multiplicit
     H := H
     hab := hab }, rfl⟩
 
+end IsCyclotomicExtension
+
 namespace Solution
 
 lemma a_add_eta_mul_b : S.a + η * S.b = (S.a + S.b) + λ * S.b := by rw [coe_eta]; ring
@@ -383,6 +391,10 @@ lemma lambda_dvd_a_add_eta_sq_mul_b : λ ∣ (S.a + η ^ 2 * S.b) := by
   rw [show S.a + η ^ 2 * S.b = (S.a + S.b) + λ ^ 2 * S.b + 2 * λ * S.b by rw [coe_eta]; ring]
   exact dvd_add (dvd_add (dvd_trans (dvd_pow_self _ (by decide)) S.hab) ⟨λ * S.b, by ring⟩)
     ⟨2 * S.b, by ring⟩
+
+section IsCyclotomicExtension
+
+variable [NumberField K] [IsCyclotomicExtension {3} ℚ K]
 
 /-- Given `(S : Solution)`, we have that `λ ^ 2` does not divide `S.a + η * S.b`. -/
 lemma lambda_sq_not_dvd_a_add_eta_mul_b : ¬ λ ^ 2 ∣ (S.a + η * S.b) := by
@@ -445,6 +457,8 @@ lemma associated_of_dvd_a_add_eta_mul_b_of_dvd_a_add_eta_sq_mul_b {p : 𝓞 K} (
   _ = 2 * η.1 ^ 2 + 3 * η + 1 := by ring
   _ = λ := by rw [eta_sq, coe_eta]; ring
 
+end IsCyclotomicExtension
+
 /-- Given `S : Solution`, we let `S.y` be any element such that `S.a + η * S.b = λ * S.y` -/
 private noncomputable def y := (lambda_dvd_a_add_eta_mul_b S).choose
 private lemma y_spec : S.a + η * S.b = λ * S.y :=
@@ -454,6 +468,8 @@ private lemma y_spec : S.a + η * S.b = λ * S.y :=
 private noncomputable def z := (lambda_dvd_a_add_eta_sq_mul_b S).choose
 private lemma z_spec : S.a + η ^ 2 * S.b = λ * S.z :=
   (lambda_dvd_a_add_eta_sq_mul_b S).choose_spec
+
+variable [NumberField K] [IsCyclotomicExtension {3} ℚ K]
 
 private lemma lambda_not_dvd_y : ¬ λ ∣ S.y := fun h ↦ by
   replace h := mul_dvd_mul_left ((η : 𝓞 K) - 1) h
@@ -467,7 +483,7 @@ private lemma lambda_not_dvd_z : ¬ λ ∣ S.z := fun h ↦ by
 
 /-- We have that `λ ^ (3*S.multiplicity-2)` divides `S.a + S.b`. -/
 private lemma lambda_pow_dvd_a_add_b : λ ^ (3 * S.multiplicity - 2) ∣ S.a + S.b := by
-  have h : λ ^ S.multiplicity ∣ S.c := multiplicity.pow_multiplicity_dvd _
+  have h : λ ^ S.multiplicity ∣ S.c := pow_multiplicity_dvd _ _
   replace h : (λ ^ multiplicity S) ^ 3 ∣ S.u * S.c ^ 3 := by simp [h]
   rw [← S.H, a_cube_add_b_cube_eq_mul, ← pow_mul, mul_comm, y_spec, z_spec] at h
   apply hζ.zeta_sub_one_prime'.pow_dvd_of_dvd_mul_left _ S.lambda_not_dvd_z
@@ -486,13 +502,14 @@ private lemma x_spec : S.a + S.b = λ ^ (3 * S.multiplicity - 2) * S.x :=
 
 /-- Given `S : Solution`, we let `S.w` be any element such that `S.c = λ ^ S.multiplicity * S.w` -/
 private noncomputable def w :=
-  (multiplicity.pow_multiplicity_dvd S.toSolution'.multiplicity_lambda_c_finite).choose
+  (pow_multiplicity_dvd (hζ.toInteger - 1) S.c).choose
 
+omit [NumberField K] [IsCyclotomicExtension {3} ℚ K] in
 private lemma w_spec : S.c = λ ^ S.multiplicity * S.w :=
-  (multiplicity.pow_multiplicity_dvd S.toSolution'.multiplicity_lambda_c_finite).choose_spec
+  (pow_multiplicity_dvd (hζ.toInteger - 1) S.c).choose_spec
 
 private lemma lambda_not_dvd_w : ¬ λ ∣ S.w := fun h ↦ by
-  refine multiplicity.is_greatest' S.toSolution'.multiplicity_lambda_c_finite
+  refine S.toSolution'.multiplicity_lambda_c_finite.not_pow_dvd_of_multiplicity_lt
     (lt_add_one S.multiplicity) ?_
   rw [pow_succ', mul_comm]
   exact S.w_spec ▸ (mul_dvd_mul_left (λ ^ S.multiplicity) h)
@@ -509,6 +526,8 @@ private lemma lambda_not_dvd_x : ¬ λ ∣ S.x := fun h ↦ by
     mul_comm _ 3, mul_dvd_mul_iff_left _] at h
   · exact lambda_not_dvd_w _ <| hζ.zeta_sub_one_prime'.dvd_of_dvd_pow h
   · simp [hζ.zeta_sub_one_prime'.ne_zero]
+
+attribute [local instance] IsCyclotomicExtension.Rat.three_pid
 
 private lemma isCoprime_helper {r s t w : 𝓞 K} (hr : ¬ λ ∣ r) (hs : ¬ λ ∣ s)
     (Hp : ∀ {p}, Prime p → p ∣ t → p ∣ w → Associated p λ) (H₁ : ∀ {q}, q ∣ r → q ∣ t)
@@ -551,7 +570,7 @@ private lemma x_mul_y_mul_z_eq_u_mul_w_cube : S.x * S.y * S.z = S.u * S.w ^ 3 :=
 
 private lemma exists_cube_associated :
     (∃ X, Associated (X ^ 3) S.x) ∧ (∃ Y, Associated (Y ^ 3) S.y) ∧
-      ∃ Z, Associated (Z ^ 3) S.z := by
+      ∃ Z, Associated (Z ^ 3) S.z := by classical
   have h₁ := S.isCoprime_x_z.mul_left S.isCoprime_y_z
   have h₂ : Associated (S.w ^ 3) (S.x * S.y * S.z) :=
     ⟨S.u, by rw [x_mul_y_mul_z_eq_u_mul_w_cube S, mul_comm]⟩
@@ -628,7 +647,8 @@ private lemma formula2 :
     calc _ = S.X^3 *(S.u₂*S.u₂⁻¹)*(η^3*S.u₁)*(λ^((S.multiplicity-1)*3)*λ):= by push_cast; ring
     _ = S.X^3*S.u₁*λ^(3*S.multiplicity-2) := by simp [hζ.toInteger_cube_eq_one, ← pow_succ, this]
   · ring
-  · field_simp [u₄_def]
+  · simp only [u₄_def, inv_eq_one_div, mul_div_assoc', mul_one, val_div_eq_divp, Units.val_mul,
+      IsUnit.unit_spec, divp_mul_eq_mul_divp, divp_eq_iff_mul_eq]
     ring
 
 private lemma lambda_sq_div_u₅_mul : λ ^ 2 ∣ S.u₅ * (λ ^ (S.multiplicity - 1) * S.X) ^ 3 := by
@@ -637,8 +657,6 @@ private lemma lambda_sq_div_u₅_mul : λ ^ 2 ∣ S.u₅ * (λ ^ (S.multiplicity
   calc _ = λ^(3*(S.multiplicity-1))*S.u₅*S.X^3 := by ring
   _ = λ^2*λ^(3*S.multiplicity-5)*S.u₅*S.X^3 := by rw [this, pow_add]
   _ = λ^2*(λ^(3*S.multiplicity-5)*S.u₅*S.X^3) := by ring
-
-variable [DecidableEq (𝓞 K)]
 
 private lemma u₄_eq_one_or_neg_one : S.u₄ = 1 ∨ S.u₄ = -1 := by
   have : λ^2 ∣ λ^4  := ⟨λ^2, by ring⟩
@@ -686,13 +704,14 @@ noncomputable def Solution'_descent : Solution' hζ where
   coprime := (isCoprime_mul_unit_left_right S.u₄.isUnit _ _).2 S.isCoprime_Y_Z
   hcdvd := by
     refine dvd_mul_of_dvd_left (dvd_pow_self _ (fun h ↦ ?_)) _
-    rw [Nat.sub_eq_iff_eq_add (le_trans (by norm_num) S.two_le_multiplicity), zero_add] at h
+    rw [Nat.sub_eq_iff_eq_add (le_trans (by simp) S.two_le_multiplicity), zero_add] at h
     simpa [h] using S.two_le_multiplicity
   H := formula3 S
 
 /-- We have that `S.Solution'_descent.multiplicity = S.multiplicity - 1`. -/
 lemma Solution'_descent_multiplicity : S.Solution'_descent.multiplicity = S.multiplicity - 1 := by
-  refine (multiplicity.unique' (by simp [Solution'_descent]) (fun h ↦ S.lambda_not_dvd_X ?_)).symm
+  refine multiplicity_eq_of_dvd_of_not_dvd
+    (by simp [Solution'_descent]) (fun h ↦ S.lambda_not_dvd_X ?_)
   obtain ⟨k, hk : λ^(S.multiplicity-1)*S.X=λ^(S.multiplicity-1+1)*k⟩ := h
   rw [pow_succ, mul_assoc] at hk
   simp only [mul_eq_mul_left_iff, pow_eq_zero_iff', hζ.zeta_sub_one_prime'.ne_zero, ne_eq,
@@ -708,7 +727,7 @@ lemma Solution'_descent_multiplicity_lt :
 /-- Given any `S : Solution`, there is another `S₁ : Solution` such that
   `S₁.multiplicity < S.multiplicity` -/
 theorem exists_Solution_multiplicity_lt :
-    ∃ S₁ : Solution hζ, S₁.multiplicity < S.multiplicity := by
+    ∃ S₁ : Solution hζ, S₁.multiplicity < S.multiplicity := by classical
   obtain ⟨S', hS'⟩ := exists_Solution_of_Solution' (Solution'_descent S)
   exact ⟨S', hS' ▸ Solution'_descent_multiplicity_lt S⟩
 

@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2022. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Scott Morrison, Yuma Mizuno, Oleksandr Manzyuk
+Authors: Kim Morrison, Yuma Mizuno, Oleksandr Manzyuk
 -/
 import Mathlib.CategoryTheory.Monoidal.Free.Coherence
 import Mathlib.Lean.Meta
@@ -90,8 +90,8 @@ instance liftHom_WhiskerRight {X Y : C} (f : X ⟶ Y) [LiftObj X] [LiftObj Y] [L
   lift := LiftHom.lift f ▷ LiftObj.lift Z
 
 instance LiftHom_tensor {W X Y Z : C} [LiftObj W] [LiftObj X] [LiftObj Y] [LiftObj Z]
-    (f : W ⟶ X) (g : Y ⟶ Z) [LiftHom f] [LiftHom g] : LiftHom (f ⊗ g) where
-  lift := LiftHom.lift f ⊗ LiftHom.lift g
+    (f : W ⟶ X) (g : Y ⟶ Z) [LiftHom f] [LiftHom g] : LiftHom (f ⊗ₘ g) where
+  lift := LiftHom.lift f ⊗ₘ LiftHom.lift g
 
 end lifting
 
@@ -121,8 +121,10 @@ def mkProjectMapExpr (e : Expr) : TermElabM Expr := do
 def monoidal_coherence (g : MVarId) : TermElabM Unit := g.withContext do
   withOptions (fun opts => synthInstance.maxSize.set opts
     (max 512 (synthInstance.maxSize.get opts))) do
-  -- TODO: is this `dsimp only` step necessary? It doesn't appear to be in the tests below.
-  let (ty, _) ← dsimp (← g.getType) (← Simp.Context.ofNames [] true)
+  let thms := [``MonoidalCoherence.iso, ``Iso.trans, ``Iso.symm, ``Iso.refl,
+    ``MonoidalCategory.whiskerRightIso, ``MonoidalCategory.whiskerLeftIso].foldl
+    (·.addDeclToUnfoldCore ·) {}
+  let (ty, _) ← dsimp (← g.getType) (← Simp.mkContext (simpTheorems := #[thms]))
   let some (_, lhs, rhs) := (← whnfR ty).eq? | exception g "Not an equation of morphisms."
   let projectMap_lhs ← mkProjectMapExpr lhs
   let projectMap_rhs ← mkProjectMapExpr rhs
@@ -183,10 +185,13 @@ elab (name := liftable_prefixes) "liftable_prefixes" : tactic => do
   withOptions (fun opts => synthInstance.maxSize.set opts
     (max 256 (synthInstance.maxSize.get opts))) do
   evalTactic (← `(tactic|
-    (simp (config := {failIfUnchanged := false}) only
-      [monoidalComp, Category.assoc, MonoidalCoherence.hom]) <;>
+    (simp -failIfUnchanged only
+      [monoidalComp, bicategoricalComp, Category.assoc, BicategoricalCoherence.iso,
+      MonoidalCoherence.iso, Iso.trans, Iso.symm, Iso.refl,
+      MonoidalCategory.whiskerRightIso, MonoidalCategory.whiskerLeftIso,
+      Bicategory.whiskerRightIso, Bicategory.whiskerLeftIso]) <;>
     (apply (cancel_epi (𝟙 _)).1 <;> try infer_instance) <;>
-    (simp (config := {failIfUnchanged := false}) only
+    (simp -failIfUnchanged only
       [assoc_liftHom, Mathlib.Tactic.BicategoryCoherence.assoc_liftHom₂])))
 
 lemma insert_id_lhs {C : Type*} [Category C] {X Y : C} (f g : X ⟶ Y) (w : f ≫ 𝟙 _ = g) :
@@ -245,15 +250,15 @@ def coherence_loop (maxSteps := 37) : TacticM Unit :=
 open Lean.Parser.Tactic
 
 /--
-Simp lemmas for rewriting a hom in monoical categories into a normal form.
+Simp lemmas for rewriting a hom in monoidal categories into a normal form.
 -/
-syntax (name := monoidal_simps) "monoidal_simps" (config)? : tactic
+syntax (name := monoidal_simps) "monoidal_simps" optConfig : tactic
 
 @[inherit_doc monoidal_simps]
 elab_rules : tactic
-| `(tactic| monoidal_simps $[$cfg]?) => do
+| `(tactic| monoidal_simps $cfg:optConfig) => do
   evalTactic (← `(tactic|
-    simp $[$cfg]? only [
+    simp $cfg only [
       Category.assoc, MonoidalCategory.tensor_whiskerLeft, MonoidalCategory.id_whiskerLeft,
       MonoidalCategory.whiskerRight_tensor, MonoidalCategory.whiskerRight_id,
       MonoidalCategory.whiskerLeft_comp, MonoidalCategory.whiskerLeft_id,
@@ -284,15 +289,11 @@ syntax (name := coherence) "coherence" : tactic
 elab_rules : tactic
 | `(tactic| coherence) => do
   evalTactic (← `(tactic|
-    (simp (config := {failIfUnchanged := false}) only [bicategoricalComp,
-      BicategoricalCoherence.hom,
-      monoidalComp]);
-    whisker_simps (config := {failIfUnchanged := false});
-    monoidal_simps (config := {failIfUnchanged := false})))
+    (simp -failIfUnchanged only [bicategoricalComp, monoidalComp]);
+    whisker_simps -failIfUnchanged;
+    monoidal_simps -failIfUnchanged))
   coherence_loop
 
 end Coherence
 
-end Tactic
-
-end Mathlib
+end Mathlib.Tactic

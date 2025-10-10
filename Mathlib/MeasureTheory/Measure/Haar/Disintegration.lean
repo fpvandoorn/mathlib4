@@ -46,7 +46,6 @@ theorem LinearMap.exists_map_addHaar_eq_smul_addHaar' (h : Function.Surjective L
   is also true for linear equivalences, as they map Haar measure to Haar measure. The general case
   follows from these two and linear algebra, as `L` can be interpreted as the composition of the
   projection `P` on a complement `T` to its kernel `S`, together with a linear equivalence. -/
-  have : ProperSpace E := .of_locallyCompactSpace 𝕜
   have : FiniteDimensional 𝕜 E := .of_locallyCompactSpace 𝕜
   have : ProperSpace F := by
     rcases subsingleton_or_nontrivial E with hE|hE
@@ -97,7 +96,8 @@ theorem LinearMap.exists_map_addHaar_eq_smul_addHaar' (h : Function.Surjective L
       isAddLeftInvariant_eq_smul _ _⟩
     simpa only [ne_eq, ENNReal.coe_eq_zero] using
       (addHaarScalarFactor_pos_of_isAddHaarMeasure (μT.map L') ν).ne'
-  refine ⟨c₀ * c₁, by simp [pos_iff_ne_zero, c₀_pos, c₁_pos], ENNReal.mul_lt_top c₀_fin c₁_fin, ?_⟩
+  refine ⟨c₀ * c₁, by simp [pos_iff_ne_zero, c₀_pos, c₁_pos],
+    ENNReal.mul_lt_top c₀_fin.lt_top c₁_fin.lt_top, ?_⟩
   simp only [I, h₀, Measure.map_smul, J, smul_smul, h₁]
   rw [mul_assoc, mul_comm _ c₁, ← mul_assoc]
 
@@ -132,7 +132,8 @@ lemma ae_ae_add_linearMap_mem_iff [LocallyCompactSpace F] {s : Set F} (hs : Meas
   have : ProperSpace F := .of_locallyCompactSpace 𝕜
   let M : F × E →ₗ[𝕜] F := LinearMap.id.coprod L
   have M_cont : Continuous M := M.continuous_of_finiteDimensional
-  -- Note: #8386 had to change `range_eq_top` into `range_eq_top (f := _)`
+  -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 had to change `range_eq_top` into
+  -- `range_eq_top (f := _)`
   have hM : Function.Surjective M := by
     simp [M, ← LinearMap.range_eq_top (f := _), LinearMap.range_coprod]
   have A : ∀ x, M x ∈ s ↔ x ∈ M ⁻¹' s := fun x ↦ Iff.rfl
@@ -146,6 +147,6 @@ suffices to check it almost everywhere along all translates of a given vector su
 instance of a disintegration argument for additive Haar measures. -/
 lemma ae_mem_of_ae_add_linearMap_mem [LocallyCompactSpace F] {s : Set F} (hs : MeasurableSet s)
     (h : ∀ y, ∀ᵐ x ∂μ, y + L x ∈ s) : ∀ᵐ y ∂ν, y ∈ s :=
-  (ae_ae_add_linearMap_mem_iff L μ ν hs).1 (Filter.eventually_of_forall h)
+  (ae_ae_add_linearMap_mem_iff L μ ν hs).1 (Filter.Eventually.of_forall h)
 
 end MeasureTheory

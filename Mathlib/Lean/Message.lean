@@ -4,12 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn
 -/
 import Lean.Message
+import Mathlib.Tactic.Linter.DeprecatedModule
 
-/-!
-# Additional operations on MessageData and related types
--/
-
-open Lean Std MessageData
-
-instance {α β : Type} [ToMessageData α] [ToMessageData β] : ToMessageData (α × β) :=
-  ⟨fun x => paren <| toMessageData x.1 ++ ofFormat "," ++ Format.line ++ toMessageData x.2⟩
+deprecated_module (since := "2025-08-18")

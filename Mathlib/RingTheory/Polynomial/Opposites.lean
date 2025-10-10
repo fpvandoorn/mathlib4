@@ -3,7 +3,7 @@ Copyright (c) 2022 Damiano Testa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Damiano Testa
 -/
-import Mathlib.Algebra.Polynomial.Degree.Definitions
+import Mathlib.Algebra.Polynomial.Degree.Support
 
 /-!  #  Interactions between `R[X]` and `Rᵐᵒᵖ[X]`
 
@@ -14,7 +14,7 @@ over a semiring and the polynomial ring over the opposite semiring. -/
 
 open Polynomial
 
-open Polynomial MulOpposite
+open MulOpposite
 
 variable {R : Type*} [Semiring R]
 
@@ -77,21 +77,21 @@ theorem opRingEquiv_symm_C_mul_X_pow (r : Rᵐᵒᵖ) (n : ℕ) :
 @[simp]
 theorem coeff_opRingEquiv (p : R[X]ᵐᵒᵖ) (n : ℕ) :
     (opRingEquiv R p).coeff n = op ((unop p).coeff n) := by
-  induction' p with p
+  induction p with | _ p
   cases p
   rfl
 
 @[simp]
 theorem support_opRingEquiv (p : R[X]ᵐᵒᵖ) : (opRingEquiv R p).support = (unop p).support := by
-  induction' p with p
+  induction p with | _ p
   cases p
   exact Finsupp.support_mapRange_of_injective (map_zero _) _ op_injective
 
 @[simp]
 theorem natDegree_opRingEquiv (p : R[X]ᵐᵒᵖ) : (opRingEquiv R p).natDegree = (unop p).natDegree := by
   by_cases p0 : p = 0
-  · simp only [p0, _root_.map_zero, natDegree_zero, unop_zero]
-  · simp only [p0, natDegree_eq_support_max', Ne, AddEquivClass.map_eq_zero_iff, not_false_iff,
+  · simp only [p0, map_zero, natDegree_zero, unop_zero]
+  · simp only [p0, natDegree_eq_support_max', Ne, EmbeddingLike.map_eq_zero_iff, not_false_iff,
       support_opRingEquiv, unop_eq_zero_iff]
 
 @[simp]

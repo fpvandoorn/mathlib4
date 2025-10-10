@@ -52,8 +52,10 @@ structure WittVector (p : ℕ) (R : Type*) where mk' ::
   -/
   coeff : ℕ → R
 
--- Porting note: added to make the `p` argument explicit
-/-- Construct a Witt vector `mk p x : 𝕎 R` from a sequence `x` of elements of `R`. -/
+/-- Construct a Witt vector `mk p x : 𝕎 R` from a sequence `x` of elements of `R`.
+
+This is preferred over `WittVector.mk'` because it has `p` explicit.
+-/
 def WittVector.mk (p : ℕ) {R : Type*} (coeff : ℕ → R) : WittVector p R := mk' coeff
 
 variable {p : ℕ}
@@ -72,10 +74,11 @@ theorem ext {x y : 𝕎 R} (h : ∀ n, x.coeff n = y.coeff n) : x = y := by
   cases x
   cases y
   simp only at h
-  simp [Function.funext_iff, h]
+  simp [funext_iff, h]
 
 variable (p)
 
+@[simp]
 theorem coeff_mk (x : ℕ → R) : (mk p x).coeff = x :=
   rfl
 
@@ -87,7 +90,6 @@ instance : Functor (WittVector p) where
 
 instance : LawfulFunctor (WittVector p) where
   map_const := rfl
-  -- Porting note: no longer needs to deconstruct `v` to conclude `{coeff := v.coeff} = v`
   id_map _ := rfl
   comp_map _ _ _ := rfl
 
@@ -156,8 +158,6 @@ evaluating this at `(x₀, x₁)` gives us the sum of two Witt vectors `x₀ + x
 def eval {k : ℕ} (φ : ℕ → MvPolynomial (Fin k × ℕ) ℤ) (x : Fin k → 𝕎 R) : 𝕎 R :=
   mk p fun n => peval (φ n) fun i => (x i).coeff
 
-variable (R) [Fact p.Prime]
-
 instance : Zero (𝕎 R) :=
   ⟨eval (wittZero p) ![]⟩
 
@@ -213,7 +213,7 @@ theorem wittOne_zero_eq_one : wittOne p 0 = 1 := by
 @[simp]
 theorem wittOne_pos_eq_zero (n : ℕ) (hn : 0 < n) : wittOne p n = 0 := by
   apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
-  simp only [wittOne, wittStructureRat, RingHom.map_zero, map_one, RingHom.map_one,
+  simp only [wittOne, wittStructureRat, RingHom.map_zero, map_one,
     map_wittStructureInt]
   induction n using Nat.strong_induction_on with | h n IH => ?_
   rw [xInTermsOfW_eq]
@@ -221,12 +221,12 @@ theorem wittOne_pos_eq_zero (n : ℕ) (hn : 0 < n) : wittOne p n = 0 := by
     bind₁_C_right]
   rw [sub_mul, one_mul]
   rw [Finset.sum_eq_single 0]
-  · simp only [invOf_eq_inv, one_mul, inv_pow, tsub_zero, RingHom.map_one, pow_zero]
+  · simp only [invOf_eq_inv, one_mul, tsub_zero, pow_zero]
     simp only [one_pow, one_mul, xInTermsOfW_zero, sub_self, bind₁_X_right]
   · intro i hin hi0
     rw [Finset.mem_range] at hin
     rw [IH _ hin (Nat.pos_of_ne_zero hi0), zero_pow (pow_ne_zero _ hp.1.ne_zero), mul_zero]
-  · rw [Finset.mem_range]; intro; contradiction
+  · grind
 
 @[simp]
 theorem wittAdd_zero : wittAdd p 0 = X (0, 0) + X (1, 0) := by
@@ -306,40 +306,38 @@ variable {p R}
 theorem v2_coeff {p' R'} (x y : WittVector p' R') (i : Fin 2) :
     (![x, y] i).coeff = ![x.coeff, y.coeff] i := by fin_cases i <;> simp
 
--- Porting note: the lemmas below needed `coeff_mk` added to the `simp` calls
-
 theorem add_coeff (x y : 𝕎 R) (n : ℕ) :
     (x + y).coeff n = peval (wittAdd p n) ![x.coeff, y.coeff] := by
-  simp [(· + ·), Add.add, eval, coeff_mk]
+  simp [(· + ·), Add.add, eval]
 
 theorem sub_coeff (x y : 𝕎 R) (n : ℕ) :
     (x - y).coeff n = peval (wittSub p n) ![x.coeff, y.coeff] := by
-  simp [(· - ·), Sub.sub, eval, coeff_mk]
+  simp [(· - ·), Sub.sub, eval]
 
 theorem mul_coeff (x y : 𝕎 R) (n : ℕ) :
     (x * y).coeff n = peval (wittMul p n) ![x.coeff, y.coeff] := by
-  simp [(· * ·), Mul.mul, eval, coeff_mk]
+  simp [(· * ·), Mul.mul, eval]
 
 theorem neg_coeff (x : 𝕎 R) (n : ℕ) : (-x).coeff n = peval (wittNeg p n) ![x.coeff] := by
-  simp [Neg.neg, eval, Matrix.cons_fin_one, coeff_mk]
+  simp [Neg.neg, eval, Matrix.cons_fin_one]
 
 theorem nsmul_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) :
     (m • x).coeff n = peval (wittNSMul p m n) ![x.coeff] := by
-  simp [(· • ·), SMul.smul, eval, Matrix.cons_fin_one, coeff_mk]
+  simp [(· • ·), SMul.smul, eval, Matrix.cons_fin_one]
 
 theorem zsmul_coeff (m : ℤ) (x : 𝕎 R) (n : ℕ) :
     (m • x).coeff n = peval (wittZSMul p m n) ![x.coeff] := by
-  simp [(· • ·), SMul.smul, eval, Matrix.cons_fin_one, coeff_mk]
+  simp [(· • ·), SMul.smul, eval, Matrix.cons_fin_one]
 
 theorem pow_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) :
     (x ^ m).coeff n = peval (wittPow p m n) ![x.coeff] := by
-  simp [(· ^ ·), Pow.pow, eval, Matrix.cons_fin_one, coeff_mk]
+  simp [(· ^ ·), Pow.pow, eval, Matrix.cons_fin_one]
 
 theorem add_coeff_zero (x y : 𝕎 R) : (x + y).coeff 0 = x.coeff 0 + y.coeff 0 := by
-  simp [add_coeff, peval]
+  simp [add_coeff, peval, Function.uncurry]
 
 theorem mul_coeff_zero (x y : 𝕎 R) : (x * y).coeff 0 = x.coeff 0 * y.coeff 0 := by
-  simp [mul_coeff, peval]
+  simp [mul_coeff, peval, Function.uncurry]
 
 end Coeff
 

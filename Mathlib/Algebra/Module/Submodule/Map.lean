@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Mario Carneiro, Kevin Buzzard, Yury Kudryashov, Frédéric Dupuis,
   Heather Macbeth
 -/
-
+import Mathlib.Algebra.Group.Subgroup.Map
+import Mathlib.Algebra.Module.Submodule.Basic
 import Mathlib.Algebra.Module.Submodule.Lattice
 import Mathlib.Algebra.Module.Submodule.LinearMap
 
@@ -57,6 +58,9 @@ def map (f : F) (p : Submodule R M) : Submodule R₂ M₂ :=
 theorem map_coe (f : F) (p : Submodule R M) : (map f p : Set M₂) = f '' p :=
   rfl
 
+@[simp]
+theorem map_coe_toLinearMap (f : F) (p : Submodule R M) : map (f : M →ₛₗ[σ₁₂] M₂) p = map f p := rfl
+
 theorem map_toAddSubmonoid (f : M →ₛₗ[σ₁₂] M₂) (p : Submodule R M) :
     (p.map f).toAddSubmonoid = p.toAddSubmonoid.map (f : M →+ M₂) :=
   SetLike.coe_injective rfl
@@ -99,11 +103,12 @@ theorem map_comp [RingHomSurjective σ₂₃] [RingHomSurjective σ₁₃] (f : 
     (g : M₂ →ₛₗ[σ₂₃] M₃) (p : Submodule R M) : map (g.comp f : M →ₛₗ[σ₁₃] M₃) p = map g (map f p) :=
   SetLike.coe_injective <| by simp only [← image_comp, map_coe, LinearMap.coe_comp, comp_apply]
 
+@[gcongr]
 theorem map_mono {f : F} {p p' : Submodule R M} : p ≤ p' → map f p ≤ map f p' :=
-  image_subset _
+  image_mono
 
 @[simp]
-theorem map_zero : map (0 : M →ₛₗ[σ₁₂] M₂) p = ⊥ :=
+protected theorem map_zero : map (0 : M →ₛₗ[σ₁₂] M₂) p = ⊥ :=
   have : ∃ x : M, x ∈ p := ⟨0, p.zero_mem⟩
   ext <| by simp [this, eq_comm]
 
@@ -118,6 +123,10 @@ theorem map_inf_le (f : F) {p q : Submodule R M} :
 theorem map_inf (f : F) {p q : Submodule R M} (hf : Injective f) :
     (p ⊓ q).map f = p.map f ⊓ q.map f :=
   SetLike.coe_injective <| Set.image_inter hf
+
+lemma map_iInf {ι : Sort*} [Nonempty ι] {p : ι → Submodule R M} (f : F) (hf : Injective f) :
+    (⨅ i, p i).map f = ⨅ i, (p i).map f :=
+  SetLike.coe_injective <| by simpa only [map_coe, coe_iInf] using hf.injOn.image_iInter_eq
 
 theorem range_map_nonempty (N : Submodule R M) :
     (Set.range (fun ϕ => Submodule.map ϕ N : (M →ₛₗ[σ₁₂] M₂) → Submodule R₂ M₂)).Nonempty :=
@@ -142,7 +151,7 @@ noncomputable def equivMapOfInjective (f : F) (i : Injective f) (p : Submodule R
       rfl
     map_smul' := by
       intros
-      -- Note: #8386 changed `map_smulₛₗ` into `map_smulₛₗ _`
+      -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 changed `map_smulₛₗ` into `map_smulₛₗ _`
       simp only [coe_smul_of_tower, map_smulₛₗ _, Equiv.toFun_as_coe, Equiv.Set.image_apply]
       rfl }
 
@@ -161,12 +170,15 @@ theorem map_equivMapOfInjective_symm_apply (f : F) (i : Injective f) (p : Submod
 def comap [SemilinearMapClass F σ₁₂ M M₂] (f : F) (p : Submodule R₂ M₂) : Submodule R M :=
   { p.toAddSubmonoid.comap f with
     carrier := f ⁻¹' p
-    -- Note: #8386 added `map_smulₛₗ _`
+    -- Note: https://github.com/leanprover-community/mathlib4/pull/8386 added `map_smulₛₗ _`
     smul_mem' := fun a x h => by simp [p.smul_mem (σ₁₂ a) h, map_smulₛₗ _] }
 
 @[simp]
 theorem comap_coe (f : F) (p : Submodule R₂ M₂) : (comap f p : Set M) = f ⁻¹' p :=
   rfl
+
+@[simp] theorem comap_coe_toLinearMap (f : F) (p : Submodule R₂ M₂) :
+    comap (f : M →ₛₗ[σ₁₂] M₂) p = comap f p := rfl
 
 @[simp]
 theorem AddMonoidHom.coe_toIntLinearMap_comap {A A₂ : Type*} [AddCommGroup A] [AddCommGroup A₂]
@@ -186,14 +198,15 @@ theorem comap_comp (f : M →ₛₗ[σ₁₂] M₂) (g : M₂ →ₛₗ[σ₂₃
     comap (g.comp f : M →ₛₗ[σ₁₃] M₃) p = comap f (comap g p) :=
   rfl
 
+@[gcongr]
 theorem comap_mono {f : F} {q q' : Submodule R₂ M₂} : q ≤ q' → comap f q ≤ comap f q' :=
   preimage_mono
 
-theorem le_comap_pow_of_le_comap (p : Submodule R M) {f : M →ₗ[R] M} (h : p ≤ p.comap f) (k : ℕ) :
-    p ≤ p.comap (f ^ k) := by
-  induction' k with k ih
-  · simp [LinearMap.one_eq_id]
-  · simp [LinearMap.iterate_succ, comap_comp, h.trans (comap_mono ih)]
+theorem le_comap_pow_of_le_comap (p : Submodule R M) {f : M →ₗ[R] M}
+    (h : p ≤ p.comap f) (k : ℕ) : p ≤ p.comap (f ^ k) := by
+  induction k with
+  | zero => simp [Module.End.one_eq_id]
+  | succ k ih => simp [Module.End.iterate_succ, comap_comp, h.trans (comap_mono ih)]
 
 section
 
@@ -245,6 +258,21 @@ theorem map_comap_le [RingHomSurjective σ₁₂] (f : F) (q : Submodule R₂ M�
 theorem le_comap_map [RingHomSurjective σ₁₂] (f : F) (p : Submodule R M) : p ≤ comap f (map f p) :=
   (gc_map_comap f).le_u_l _
 
+section submoduleOf
+
+/-- For any `R` submodules `p` and `q`, `p ⊓ q` as a submodule of `q`. -/
+def submoduleOf (p q : Submodule R M) : Submodule R q :=
+  Submodule.comap q.subtype p
+
+/-- If `p ≤ q`, then `p` as a subgroup of `q` is isomorphic to `p`. -/
+def submoduleOfEquivOfLe {p q : Submodule R M} (h : p ≤ q) : p.submoduleOf q ≃ₗ[R] p where
+  toFun m := ⟨m.1, m.2⟩
+  invFun m := ⟨⟨m.1, h m.2⟩, m.2⟩
+  map_add' _ _ := rfl
+  map_smul' _ _ := rfl
+
+end submoduleOf
+
 section GaloisInsertion
 
 variable [RingHomSurjective σ₁₂] {f : F}
@@ -257,6 +285,7 @@ def giMapComap (hf : Surjective f) : GaloisInsertion (map f) (comap f) :=
     exact ⟨y, hx, rfl⟩
 
 variable (hf : Surjective f)
+include hf
 
 theorem map_comap_eq_of_surjective (p : Submodule R₂ M₂) : (p.comap f).map f = p :=
   (giMapComap hf).l_u_eq _
@@ -271,9 +300,12 @@ theorem map_sup_comap_of_surjective (p q : Submodule R₂ M₂) :
     (p.comap f ⊔ q.comap f).map f = p ⊔ q :=
   (giMapComap hf).l_sup_u _ _
 
-theorem map_iSup_comap_of_sujective {ι : Sort*} (S : ι → Submodule R₂ M₂) :
+theorem map_iSup_comap_of_surjective {ι : Sort*} (S : ι → Submodule R₂ M₂) :
     (⨆ i, (S i).comap f).map f = iSup S :=
   (giMapComap hf).l_iSup_u _
+
+@[deprecated (since := "2025-07-08")]
+alias map_iSup_comap_of_sujective := map_iSup_comap_of_surjective
 
 theorem map_inf_comap_of_surjective (p q : Submodule R₂ M₂) :
     (p.comap f ⊓ q.comap f).map f = p ⊓ q :=
@@ -283,11 +315,23 @@ theorem map_iInf_comap_of_surjective {ι : Sort*} (S : ι → Submodule R₂ M�
     (⨅ i, (S i).comap f).map f = iInf S :=
   (giMapComap hf).l_iInf_u _
 
-theorem comap_le_comap_iff_of_surjective (p q : Submodule R₂ M₂) : p.comap f ≤ q.comap f ↔ p ≤ q :=
+theorem comap_le_comap_iff_of_surjective {p q : Submodule R₂ M₂} : p.comap f ≤ q.comap f ↔ p ≤ q :=
   (giMapComap hf).u_le_u_iff
+
+lemma comap_lt_comap_iff_of_surjective {p q : Submodule R₂ M₂} : p.comap f < q.comap f ↔ p < q := by
+  apply lt_iff_lt_of_le_iff_le' <;> exact comap_le_comap_iff_of_surjective hf
 
 theorem comap_strictMono_of_surjective : StrictMono (comap f) :=
   (giMapComap hf).strictMono_u
+
+variable {p q}
+
+theorem le_map_of_comap_le_of_surjective (h : q.comap f ≤ p) : q ≤ p.map f :=
+  map_comap_eq_of_surjective hf q ▸ map_mono h
+
+theorem lt_map_of_comap_lt_of_surjective (h : q.comap f < p) : q < p.map f := by
+  rw [lt_iff_le_not_ge] at h ⊢; rw [map_le_iff_le_comap]
+  exact h.imp_left (le_map_of_comap_le_of_surjective hf)
 
 end GaloisInsertion
 
@@ -298,12 +342,13 @@ variable [RingHomSurjective σ₁₂] {f : F}
 /-- `map f` and `comap f` form a `GaloisCoinsertion` when `f` is injective. -/
 def gciMapComap (hf : Injective f) : GaloisCoinsertion (map f) (comap f) :=
   (gc_map_comap f).toGaloisCoinsertion fun S x => by
-    simp [mem_comap, mem_map, forall_exists_index, and_imp]
+    simp only [mem_comap, mem_map, forall_exists_index, and_imp]
     intro y hy hxy
     rw [hf.eq_iff] at hxy
     rwa [← hxy]
 
 variable (hf : Injective f)
+include hf
 
 theorem comap_map_eq_of_injective (p : Submodule R M) : (p.map f).comap f = p :=
   (gciMapComap hf).u_l_eq _
@@ -334,6 +379,25 @@ theorem map_le_map_iff_of_injective (p q : Submodule R M) : p.map f ≤ q.map f 
 theorem map_strictMono_of_injective : StrictMono (map f) :=
   (gciMapComap hf).strictMono_l
 
+lemma map_lt_map_iff_of_injective {p q : Submodule R M} :
+    p.map f < q.map f ↔ p < q := by
+  rw [lt_iff_le_and_ne, lt_iff_le_and_ne, map_le_map_iff_of_injective hf,
+    (map_injective_of_injective hf).ne_iff]
+
+lemma comap_lt_of_lt_map_of_injective {p : Submodule R M} {q : Submodule R₂ M₂}
+    (h : q < p.map f) : q.comap f < p := by
+  rw [← map_lt_map_iff_of_injective hf]
+  exact (map_comap_le _ _).trans_lt h
+
+lemma map_covBy_of_injective {p q : Submodule R M} (h : p ⋖ q) :
+    p.map f ⋖ q.map f := by
+  refine ⟨lt_of_le_of_ne (map_mono h.1.le) ((map_injective_of_injective hf).ne h.1.ne), ?_⟩
+  intro P h₁ h₂
+  refine h.2 ?_ (Submodule.comap_lt_of_lt_map_of_injective hf h₂)
+  rw [← Submodule.map_lt_map_iff_of_injective hf]
+  refine h₁.trans_le ?_
+  exact (Set.image_preimage_eq_of_subset (.trans h₂.le (Set.image_subset_range _ _))).superset
+
 end GaloisCoinsertion
 
 end SemilinearMap
@@ -353,9 +417,26 @@ def orderIsoMapComapOfBijective [FunLike F M M₂] [SemilinearMapClass F σ₁�
   map_rel_iff' := map_le_map_iff_of_injective hf.injective _ _
 
 /-- A linear isomorphism induces an order isomorphism of submodules. -/
-@[simps! symm_apply apply]
+@[simps! apply]
 def orderIsoMapComap [EquivLike F M M₂] [SemilinearMapClass F σ₁₂ M M₂] (f : F) :
     Submodule R M ≃o Submodule R₂ M₂ := orderIsoMapComapOfBijective f (EquivLike.bijective f)
+
+@[simp]
+lemma orderIsoMapComap_symm_apply [EquivLike F M M₂] [SemilinearMapClass F σ₁₂ M M₂]
+    (f : F) (p : Submodule R₂ M₂) :
+    (orderIsoMapComap f).symm p = comap f p :=
+  rfl
+
+variable [EquivLike F M M₂] [SemilinearMapClass F σ₁₂ M M₂] {e : F}
+variable {p}
+
+@[simp] protected lemma map_eq_bot_iff : p.map e = ⊥ ↔ p = ⊥ := map_eq_bot_iff (orderIsoMapComap e)
+
+@[simp] protected lemma map_eq_top_iff : p.map e = ⊤ ↔ p = ⊤ := map_eq_top_iff (orderIsoMapComap e)
+
+protected lemma map_ne_bot_iff : p.map e ≠ ⊥ ↔ p ≠ ⊥ := by simp
+
+protected lemma map_ne_top_iff : p.map e ≠ ⊤ ↔ p ≠ ⊤ := by simp
 
 end OrderIso
 
@@ -376,14 +457,11 @@ theorem eq_zero_of_bot_submodule : ∀ b : (⊥ : Submodule R M), b = 0
 
 /-- The infimum of a family of invariant submodule of an endomorphism is also an invariant
 submodule. -/
-theorem _root_.LinearMap.iInf_invariant {σ : R →+* R} [RingHomSurjective σ] {ι : Sort*}
+theorem _root_.LinearMap.iInf_invariant {σ : R →+* R} {ι : Sort*}
     (f : M →ₛₗ[σ] M) {p : ι → Submodule R M} (hf : ∀ i, ∀ v ∈ p i, f v ∈ p i) :
     ∀ v ∈ iInf p, f v ∈ iInf p := by
-  have : ∀ i, (p i).map f ≤ p i := by
-    rintro i - ⟨v, hv, rfl⟩
-    exact hf i v hv
-  suffices (iInf p).map f ≤ iInf p by exact fun v hv => this ⟨v, hv, rfl⟩
-  exact le_iInf fun i => (Submodule.map_mono (iInf_le p i)).trans (this i)
+  simp only [mem_iInf]
+  exact fun v a i ↦ hf i v (a i)
 
 theorem disjoint_iff_comap_eq_bot {p q : Submodule R M} : Disjoint p q ↔ comap p.subtype q = ⊥ := by
   rw [← (map_injective_of_injective (show Injective p.subtype from Subtype.coe_injective)).eq_iff,
@@ -406,6 +484,10 @@ protected theorem map_neg (f : M →ₗ[R] M₂) : map (-f) p = map f p :=
 lemma comap_neg {f : M →ₗ[R] M₂} {p : Submodule R M₂} :
     p.comap (-f) = p.comap f := by
   ext; simp
+
+lemma map_toAddSubgroup (f : M →ₗ[R] M₂) (p : Submodule R M) :
+    (p.map f).toAddSubgroup = p.toAddSubgroup.map (f : M →+ M₂) :=
+  rfl
 
 end AddCommGroup
 
@@ -445,22 +527,14 @@ variable [Semiring R] [AddCommMonoid M] [Module R M]
 
 /-- If `s ≤ t`, then we can view `s` as a submodule of `t` by taking the comap
 of `t.subtype`. -/
-@[simps symm_apply]
+@[simps apply_coe symm_apply]
 def comapSubtypeEquivOfLe {p q : Submodule R M} (hpq : p ≤ q) : comap q.subtype p ≃ₗ[R] p where
   toFun x := ⟨x, x.2⟩
   invFun x := ⟨⟨x, hpq x.2⟩, x.2⟩
-  left_inv x := by simp only [coe_mk, SetLike.eta, LinearEquiv.coe_coe]
-  right_inv x := by simp only [Subtype.coe_mk, SetLike.eta, LinearEquiv.coe_coe]
-  map_add' x y := rfl
-  map_smul' c x := rfl
-
--- Porting note: The original theorem generated by `simps` was using `LinearEquiv.toLinearMap`,
--- different from the theorem on Lean 3, and not simp-normal form.
-@[simp]
-theorem comapSubtypeEquivOfLe_apply_coe {p q : Submodule R M} (hpq : p ≤ q)
-    (x : comap q.subtype p) :
-    (comapSubtypeEquivOfLe hpq x : M) = (x : M) :=
-  rfl
+  left_inv x := by simp only [SetLike.eta]
+  right_inv x := by simp only [SetLike.eta]
+  map_add' _ _ := rfl
+  map_smul' _ _ := rfl
 
 end Module
 
@@ -474,7 +548,6 @@ variable {τ₁₂ : R →+* R₂} {τ₂₁ : R₂ →+* R}
 variable [RingHomInvPair τ₁₂ τ₂₁] [RingHomInvPair τ₂₁ τ₁₂]
 variable (p : Submodule R M) (q : Submodule R₂ M₂)
 
--- Porting note: Was `@[simp]`.
 @[simp high]
 theorem mem_map_equiv {e : M ≃ₛₗ[τ₁₂] M₂} {x : M₂} :
     x ∈ p.map (e : M →ₛₗ[τ₁₂] M₂) ↔ e.symm x ∈ p := by
@@ -544,10 +617,7 @@ theorem comap_le_comap_smul (fₗ : N →ₗ[R] N₂) (c : R) : comap fₗ qₗ 
 the set of maps $\{f ∈ Hom(M, M₂) | f(p) ⊆ q \}$ is a submodule of `Hom(M, M₂)`. -/
 def compatibleMaps : Submodule R (N →ₗ[R] N₂) where
   carrier := { fₗ | pₗ ≤ comap fₗ qₗ }
-  zero_mem' := by
-    change pₗ ≤ comap (0 : N →ₗ[R] N₂) qₗ
-    rw [comap_zero]
-    exact le_top
+  zero_mem' := by simp
   add_mem' {f₁ f₂} h₁ h₂ := by
     apply le_trans _ (inf_comap_le_comap_add qₗ f₁ f₂)
     rw [le_inf_iff]
@@ -561,6 +631,21 @@ end Submodule
 namespace LinearMap
 
 variable [Semiring R] [AddCommMonoid M] [AddCommMonoid M₁] [Module R M] [Module R M₁]
+
+/-- The `LinearMap` from the preimage of a submodule to itself.
+
+This is the linear version of `AddMonoidHom.addSubmonoidComap`
+and `AddMonoidHom.addSubgroupComap`. -/
+@[simps!]
+def submoduleComap (f : M →ₗ[R] M₁) (q : Submodule R M₁) : q.comap f →ₗ[R] q :=
+  f.restrict fun _ ↦ Submodule.mem_comap.1
+
+theorem submoduleComap_surjective_of_surjective (f : M →ₗ[R] M₁) (q : Submodule R M₁)
+    (hf : Surjective f) : Surjective (f.submoduleComap q) := fun y ↦ by
+  obtain ⟨x, hx⟩ := hf y
+  use ⟨x, Submodule.mem_comap.mpr (hx ▸ y.2)⟩
+  apply Subtype.val_injective
+  simp [hx]
 
 /-- A linear map between two modules restricts to a linear map from any submodule p of the
 domain onto the image of that submodule.
@@ -582,7 +667,7 @@ open Submodule
 
 theorem map_codRestrict [RingHomSurjective σ₂₁] (p : Submodule R M) (f : M₂ →ₛₗ[σ₂₁] M) (h p') :
     Submodule.map (codRestrict p f h) p' = comap p.subtype (p'.map f) :=
-  Submodule.ext fun ⟨x, hx⟩ => by simp [Subtype.ext_iff_val]
+  Submodule.ext fun ⟨x, hx⟩ => by simp [Subtype.ext_iff]
 
 theorem comap_codRestrict (p : Submodule R M) (f : M₂ →ₛₗ[σ₂₁] M) (hf p') :
     Submodule.comap (codRestrict p f hf) p' = Submodule.comap f (map p.subtype p') :=
@@ -605,9 +690,7 @@ variable {σ₁₂ : R →+* R₂} {σ₂₁ : R₂ →+* R}
 variable {re₁₂ : RingHomInvPair σ₁₂ σ₂₁} {re₂₁ : RingHomInvPair σ₂₁ σ₁₂}
 variable (e : M ≃ₛₗ[σ₁₂] M₂)
 
-theorem map_eq_comap {p : Submodule R M} :
-    (p.map (e : M →ₛₗ[σ₁₂] M₂) : Submodule R₂ M₂) = p.comap (e.symm : M₂ →ₛₗ[σ₂₁] M) :=
-  SetLike.coe_injective <| by simp [e.image_eq_preimage]
+@[deprecated (since := "2025-06-18")] alias map_eq_comap := Submodule.map_equiv_eq_comap_symm
 
 /-- A linear equivalence of two modules restricts to a linear equivalence from any submodule
 `p` of the domain onto the image of that submodule.
@@ -618,7 +701,7 @@ This is `LinearEquiv.ofSubmodule'` but with `map` on the right instead of `comap
 def submoduleMap (p : Submodule R M) : p ≃ₛₗ[σ₁₂] ↥(p.map (e : M →ₛₗ[σ₁₂] M₂) : Submodule R₂ M₂) :=
   { ((e : M →ₛₗ[σ₁₂] M₂).domRestrict p).codRestrict (p.map (e : M →ₛₗ[σ₁₂] M₂)) fun x =>
       ⟨x, by
-        simp only [LinearMap.domRestrict_apply, eq_self_iff_true, and_true_iff, SetLike.coe_mem,
+        simp only [LinearMap.domRestrict_apply, and_true, SetLike.coe_mem,
           SetLike.mem_coe]⟩ with
     invFun := fun y =>
       ⟨(e.symm : M₂ →ₛₗ[σ₂₁] M) y, by
@@ -626,7 +709,7 @@ def submoduleMap (p : Submodule R M) : p ≃ₛₗ[σ₁₂] ↥(p.map (e : M �
         rw [Submodule.mem_map] at hy
         rcases hy with ⟨x, hx, hxy⟩
         subst hxy
-        simp only [symm_apply_apply, Submodule.coe_mk, coe_coe, hx]⟩
+        simp only [symm_apply_apply, coe_coe, hx]⟩
     left_inv := fun x => by
       simp only [LinearMap.domRestrict_apply, LinearMap.codRestrict_apply, LinearMap.toFun_eq_coe,
         LinearEquiv.coe_coe, LinearEquiv.symm_apply_apply, SetLike.eta]

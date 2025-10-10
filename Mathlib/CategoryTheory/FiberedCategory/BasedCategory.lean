@@ -7,14 +7,14 @@ Authors: Paul Lezeau, Calle Sönne
 import Mathlib.CategoryTheory.FiberedCategory.HomLift
 import Mathlib.CategoryTheory.Bicategory.Strict
 import Mathlib.CategoryTheory.Functor.Category
-import Mathlib.CategoryTheory.Functor.ReflectsIso
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Basic
 
 /-!
 # The bicategory of based categories
 
 In this file we define the type `BasedCategory 𝒮`, and give it the structure of a strict
 bicategory. Given a category `𝒮`, we define the type `BasedCategory 𝒮` as the type of categories
-`𝒳` equiped with a functor `𝒳.p : 𝒳 ⥤ 𝒮`.
+`𝒳` equipped with a functor `𝒳.p : 𝒳 ⥤ 𝒮`.
 
 We also define a type of functors between based categories `𝒳` and `𝒴`, which we call
 `BasedFunctor 𝒳 𝒴` and denote as `𝒳 ⥤ᵇ 𝒴`. These are defined as functors between the underlying
@@ -29,14 +29,14 @@ universe v₅ u₅ v₄ u₄ v₃ u₃ v₂ u₂ v₁ u₁
 
 namespace CategoryTheory
 
-open CategoryTheory Functor Category NatTrans IsHomLift
+open Functor Category NatTrans IsHomLift
 
 variable {𝒮 : Type u₁} [Category.{v₁} 𝒮]
 
 /-- A based category over `𝒮` is a category `𝒳` together with a functor `p : 𝒳 ⥤ 𝒮`. -/
 @[nolint checkUnivs]
 structure BasedCategory (𝒮 : Type u₁) [Category.{v₁} 𝒮] where
-  /-- The type of objects in a `BasedCategory`-/
+  /-- The type of objects in a `BasedCategory` -/
   obj : Type u₂
   /-- The underlying category of a `BasedCategory`. -/
   category : Category.{v₂} obj := by infer_instance
@@ -54,7 +54,7 @@ def BasedCategory.ofFunctor {𝒳 : Type u₂} [Category.{v₂} 𝒳] (p : 𝒳 
 with the projections. -/
 structure BasedFunctor (𝒳 : BasedCategory.{v₂, u₂} 𝒮) (𝒴 : BasedCategory.{v₃, u₃} 𝒮) extends
     𝒳.obj ⥤ 𝒴.obj where
-  w : toFunctor ⋙ 𝒴.p = 𝒳.p := by aesop_cat
+  w : toFunctor ⋙ 𝒴.p = 𝒳.p := by cat_disch
 
 /-- Notation for `BasedFunctor`. -/
 scoped infixr:26 " ⥤ᵇ " => BasedFunctor
@@ -133,7 +133,7 @@ end BasedFunctor
 underlying functors, such that for all `a : 𝒳`, `α.app a` lifts `𝟙 S` whenever `𝒳.p.obj a = S`. -/
 structure BasedNatTrans {𝒳 : BasedCategory.{v₂, u₂} 𝒮} {𝒴 : BasedCategory.{v₃, u₃} 𝒮}
     (F G : 𝒳 ⥤ᵇ 𝒴) extends CategoryTheory.NatTrans F.toFunctor G.toFunctor where
-  isHomLift' : ∀ (a : 𝒳.obj), IsHomLift 𝒴.p (𝟙 (𝒳.p.obj a)) (toNatTrans.app a) := by aesop_cat
+  isHomLift' : ∀ (a : 𝒳.obj), IsHomLift 𝒴.p (𝟙 (𝒳.p.obj a)) (toNatTrans.app a) := by cat_disch
 
 namespace BasedNatTrans
 
@@ -222,7 +222,7 @@ def id (F : 𝒳 ⥤ᵇ 𝒴) : F ≅ F where
 
 variable {F G : 𝒳 ⥤ᵇ 𝒴}
 
-/-- The inverse of a based natural transformation whose underlying natural tranformation is an
+/-- The inverse of a based natural transformation whose underlying natural transformation is an
 isomorphism. -/
 def mkNatIso (α : F.toFunctor ≅ G.toFunctor)
     (isHomLift' : ∀ a : 𝒳.obj, IsHomLift 𝒴.p (𝟙 (𝒳.p.obj a)) (α.hom.app a)) : F ≅ G where
@@ -230,8 +230,8 @@ def mkNatIso (α : F.toFunctor ≅ G.toFunctor)
   inv := {
     toNatTrans := α.inv
     isHomLift' := fun a ↦ by
-      have : 𝒴.p.IsHomLift (𝟙 (𝒳.p.obj a)) (α.app a).hom := (NatIso.app_hom α a) ▸ isHomLift' a
-      rw [← NatIso.app_inv]
+      have : 𝒴.p.IsHomLift (𝟙 (𝒳.p.obj a)) (α.app a).hom := (Iso.app_hom α a) ▸ isHomLift' a
+      rw [← Iso.app_inv]
       apply IsHomLift.lift_id_inv }
 
 lemma isIso_of_toNatTrans_isIso (α : F ⟶ G) [IsIso (X := F.toFunctor) α.toNatTrans] : IsIso α :=
@@ -253,7 +253,7 @@ and natural transformations. -/
 @[simps]
 def whiskerLeft {𝒵 : BasedCategory.{v₄, u₄} 𝒮} (F : 𝒳 ⥤ᵇ 𝒴) {G H : 𝒴 ⥤ᵇ 𝒵} (α : G ⟶ H) :
     F ⋙ G ⟶ F ⋙ H where
-  toNatTrans := CategoryTheory.whiskerLeft F.toFunctor α.toNatTrans
+  toNatTrans := Functor.whiskerLeft F.toFunctor α.toNatTrans
   isHomLift' := fun a ↦ α.isHomLift (F.w_obj a)
 
 /-- Right-whiskering in the bicategory `BasedCategory` is given by whiskering the underlying
@@ -261,7 +261,7 @@ functors and natural transformations. -/
 @[simps]
 def whiskerRight {𝒵 : BasedCategory.{v₄, u₄} 𝒮} {F G : 𝒳 ⥤ᵇ 𝒴} (α : F ⟶ G) (H : 𝒴 ⥤ᵇ 𝒵) :
     F ⋙ H ⟶ G ⋙ H where
-  toNatTrans := CategoryTheory.whiskerRight α.toNatTrans H.toFunctor
+  toNatTrans := Functor.whiskerRight α.toNatTrans H.toFunctor
   isHomLift' := fun _ ↦ BasedFunctor.preserves_isHomLift _ _ _
 
 end
@@ -279,11 +279,11 @@ instance bicategory : Bicategory (BasedCategory.{v₂, u₂} 𝒮) where
   id 𝒳 := 𝟭 𝒳
   comp F G := F ⋙ G
   homCategory 𝒳 𝒴 := homCategory 𝒳 𝒴
-  whiskerLeft {𝒳 𝒴 𝒵} F {G H} α := whiskerLeft F α
-  whiskerRight {𝒳 𝒴 𝒵} F G α H := whiskerRight α H
-  associator F G H := BasedNatIso.id _
-  leftUnitor {𝒳 𝒴} F := BasedNatIso.id F
-  rightUnitor {𝒳 𝒴} F := BasedNatIso.id F
+  whiskerLeft {_ _ _} F {_ _} α := whiskerLeft F α
+  whiskerRight {_ _ _} _ _ α H := whiskerRight α H
+  associator _ _ _ := BasedNatIso.id _
+  leftUnitor {_ _} F := BasedNatIso.id F
+  rightUnitor {_ _} F := BasedNatIso.id F
 
 /-- The bicategory structure on `BasedCategory.{v₂, u₂} 𝒮` is strict. -/
 instance : Bicategory.Strict (BasedCategory.{v₂, u₂} 𝒮) where

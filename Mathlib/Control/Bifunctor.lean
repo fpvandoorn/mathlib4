@@ -5,7 +5,6 @@ Authors: Simon Hudon
 -/
 import Mathlib.Control.Functor
 import Mathlib.Tactic.Common
-import Batteries.Data.Sum.Basic
 
 /-!
 # Functors with two arguments
@@ -120,13 +119,12 @@ instance Sum.lawfulBifunctor : LawfulBifunctor Sum where
   id_bimap := by aesop
   bimap_bimap := by aesop
 
-open Bifunctor Functor
+open Bifunctor
 
 instance (priority := 10) Bifunctor.functor {α} : Functor (F α) where map f x := snd f x
 
 instance (priority := 10) Bifunctor.lawfulFunctor [LawfulBifunctor F] {α} :
     LawfulFunctor (F α) where
-  -- Porting note: `mapConst` is required to prove new theorem
   id_map := by simp [Functor.map, functor_norm]
   comp_map := by simp [Functor.map, functor_norm]
   map_const := by simp [mapConst, Functor.map]

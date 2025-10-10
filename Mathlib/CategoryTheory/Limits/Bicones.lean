@@ -27,8 +27,6 @@ noncomputable section
 
 open CategoryTheory.Limits
 
-open scoped Classical
-
 namespace CategoryTheory
 
 section Bicone
@@ -45,11 +43,11 @@ variable (J : Type u₁)
 instance : Inhabited (Bicone J) :=
   ⟨Bicone.left⟩
 
+open scoped Classical in
 instance finBicone [Fintype J] : Fintype (Bicone J) where
   elems := [Bicone.left, Bicone.right].toFinset ∪ Finset.image Bicone.diagram Fintype.elems
   complete j := by
-    cases j <;> simp
-    apply Fintype.complete
+    cases j <;> simp [Fintype.complete]
 
 variable [Category.{v₁} J]
 
@@ -65,7 +63,7 @@ instance : Inhabited (BiconeHom J Bicone.left Bicone.left) :=
   ⟨BiconeHom.left_id⟩
 
 instance BiconeHom.decidableEq {j k : Bicone J} : DecidableEq (BiconeHom J j k) := fun f g => by
-  cases f <;> cases g <;> simp <;> infer_instance
+  classical cases f <;> cases g <;> simp only [diagram.injEq] <;> infer_instance
 
 @[simps]
 instance biconeCategoryStruct : CategoryStruct (Bicone J) where
@@ -79,7 +77,7 @@ instance biconeCategoryStruct : CategoryStruct (Bicone J) where
       apply BiconeHom.left
     · cases g
       apply BiconeHom.right
-    · rcases g with (_|_|_|_|g)
+    · rcases g with (_ | _ | _ | _ | g)
       exact BiconeHom.diagram (f ≫ g)
 
 instance biconeCategory : Category (Bicone J) where
@@ -99,7 +97,7 @@ variable (J : Type v₁) [SmallCategory J]
 def biconeMk {C : Type u₁} [Category.{v₁} C] {F : J ⥤ C} (c₁ c₂ : Cone F) : Bicone J ⥤ C where
   obj X := Bicone.casesOn X c₁.pt c₂.pt fun j => F.obj j
   map f := by
-    rcases f with (_|_|_|_|f)
+    rcases f with (_ | _ | _ | _ | f)
     · exact 𝟙 _
     · exact 𝟙 _
     · exact c₁.π.app _
@@ -107,7 +105,7 @@ def biconeMk {C : Type u₁} [Category.{v₁} C] {F : J ⥤ C} (c₁ c₂ : Cone
     · exact F.map f
   map_id X := by cases X <;> simp
   map_comp f g := by
-    rcases f with (_|_|_|_|_)
+    rcases f with (_ | _ | _ | _ | _)
     · exact (Category.id_comp _).symm
     · exact (Category.id_comp _).symm
     · cases g
@@ -117,6 +115,7 @@ def biconeMk {C : Type u₁} [Category.{v₁} C] {F : J ⥤ C} (c₁ c₂ : Cone
     · cases g
       apply F.map_comp
 
+open scoped Classical in
 instance finBiconeHom [FinCategory J] (j k : Bicone J) : Fintype (j ⟶ k) := by
   cases j <;> cases k
   · exact
@@ -146,7 +145,7 @@ instance finBiconeHom [FinCategory J] (j k : Bicone J) : Fintype (j ⟶ k) := by
   · exact
     { elems := Finset.image BiconeHom.diagram Fintype.elems
       complete := fun f => by
-        rcases f with (_|_|_|_|f)
+        rcases f with (_ | _ | _ | _ | f)
         simp only [Finset.mem_image]
         use f
         simpa using Fintype.complete _ }

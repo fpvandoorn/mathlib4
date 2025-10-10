@@ -3,7 +3,7 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import Batteries.Data.Thunk
+import Mathlib.Init
 
 /-!
 # Basic facts about `Thunk`.
@@ -23,7 +23,7 @@ instance [DecidableEq α] : DecidableEq (Thunk α) := by
   rw [this]
   infer_instance
 
-/-- The cartesian product of two thunks. -/
+/-- The Cartesian product of two thunks. -/
 def prod (a : Thunk α) (b : Thunk β) : Thunk (α × β) := Thunk.mk fun _ => (a.get, b.get)
 
 @[simp] theorem prod_get_fst {a : Thunk α} {b : Thunk β} : (prod a b).get.1 = a.get := rfl

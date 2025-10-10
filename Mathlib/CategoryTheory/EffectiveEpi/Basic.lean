@@ -24,7 +24,7 @@ then these definitions are equivalent, see the file
 `CategoryTheory/EffectiveEpi/RegularEpi.lean`
 See [nlab: *Effective Epimorphism*](https://ncatlab.org/nlab/show/effective+epimorphism) and
 [Stacks 00WP](https://stacks.math.columbia.edu/tag/00WP) for the standard definitions. Note that
-our notion of `EffectiveEpi` is often called "strict epi" in the literature.
+our notion of `EffectiveEpi` is often called "strict epi" in the literature.
 
 ## References
 - [Elephant]: *Sketches of an Elephant*, P. T. Johnstone: C2.1, Example 2.1.12.
@@ -45,7 +45,7 @@ This structure encodes the data required for a morphism to be an effective epimo
 structure EffectiveEpiStruct {X Y : C} (f : Y ⟶ X) where
   /--
   For every `W` with a morphism `e : Y ⟶ W` that coequalizes every pair of morphisms
-  `g₁ g₂ : Z ⟶ Y` which `f` coequalizes, `desc e h` is a morphism `X ⟶ W`... 
+  `g₁ g₂ : Z ⟶ Y` which `f` coequalizes, `desc e h` is a morphism `X ⟶ W`...
   -/
   desc : ∀ {W : C} (e : Y ⟶ W),
     (∀ {Z : C} (g₁ g₂ : Z ⟶ Y), g₁ ≫ f = g₂ ≫ f → g₁ ≫ e = g₂ ≫ e) → (X ⟶ W)
@@ -65,7 +65,7 @@ If `f` has a kernel pair, then this is equivalent to showing that the correspond
 a colimit.
 -/
 class EffectiveEpi {X Y : C} (f : Y ⟶ X) : Prop where
-  /-- `f` is an effective epimorphism if there exists an `EffectiveEpiStruct` for `f`. -/
+  /-- `f` is an effective epimorphism if there exists an `EffectiveEpiStruct` for `f`. -/
   effectiveEpi : Nonempty (EffectiveEpiStruct f)
 
 /-- Some chosen `EffectiveEpiStruct` associated to an effective epi. -/
@@ -107,10 +107,10 @@ structure EffectiveEpiFamilyStruct {B : C} {α : Type*}
   /--
   For every `W` with a family of morphisms `e a : Y a ⟶ W` that coequalizes every pair of morphisms
   `g₁ : Z ⟶ Y a₁`, `g₂ : Z ⟶ Y a₂` which the family `π` coequalizes, `desc e h` is a morphism
-  `X ⟶ W`... 
+  `X ⟶ W`...
   -/
   desc : ∀ {W} (e : (a : α) → (X a ⟶ W)),
-          (∀ {Z : C} (a₁ a₂ : α) (g₁ : Z ⟶ X a₁) (g₂ : Z ⟶ X a₂),
+      (∀ {Z : C} (a₁ a₂ : α) (g₁ : Z ⟶ X a₁) (g₂ : Z ⟶ X a₂),
       g₁ ≫ π _ = g₂ ≫ π _ → g₁ ≫ e _ = g₂ ≫ e _) → (B ⟶ W)
   /-- ...factorizing the components of `e` through the components of `π`... -/
   fac : ∀ {W} (e : (a : α) → (X a ⟶ W))
@@ -129,7 +129,7 @@ provided that the `π a` exhibit `B` as a colimit of the diagram of all "relatio
 `R → X a₁`, `R ⟶ X a₂` for all `a₁ a₂ : α`.
 -/
 class EffectiveEpiFamily {B : C} {α : Type*} (X : α → C) (π : (a : α) → (X a ⟶ B)) : Prop where
-  /-- `π` is an effective epimorphic family if there exists an `EffectiveEpiFamilyStruct` for `π` -/
+  /-- `π` is an effective epimorphic family if there exists an `EffectiveEpiFamilyStruct` for `π` -/
   effectiveEpiFamily : Nonempty (EffectiveEpiFamilyStruct X π)
 
 /-- Some chosen `EffectiveEpiFamilyStruct` associated to an effective epi family. -/
@@ -186,7 +186,7 @@ instance {B X : C} (f : X ⟶ B) [EffectiveEpi f] : EffectiveEpiFamily (fun () �
   ⟨⟨effectiveEpiFamilyStructSingletonOfEffectiveEpi f⟩⟩
 
 /--
-A single element `EffectiveEpiFamily` constists of an `EffectiveEpi`
+A single element `EffectiveEpiFamily` consists of an `EffectiveEpi`
 -/
 noncomputable
 def effectiveEpiStructOfEffectiveEpiFamilySingleton {B X : C} (f : X ⟶ B)
@@ -255,11 +255,11 @@ def EffectiveEpiFamilyStruct.reindex
     (e : α' ≃ α)
     (P : EffectiveEpiFamilyStruct (fun a => X (e a)) (fun a => π (e a))) :
     EffectiveEpiFamilyStruct X π where
-  desc := fun f h => P.desc (fun a => f _) (fun a₁ a₂ => h _ _)
+  desc := fun f h => P.desc (fun _ => f _) (fun _ _ => h _ _)
   fac _ _ a := by
     obtain ⟨a,rfl⟩ := e.surjective a
     apply P.fac
-  uniq _ _ m hm := P.uniq _ _ _ fun a => hm _
+  uniq _ _ _ hm := P.uniq _ _ _ fun _ => hm _
 
 /--
 Reindex the indexing type of an effective epi family.

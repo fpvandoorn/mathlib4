@@ -1,12 +1,14 @@
 /-
 Copyright (c) 2020 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Bhavik Mehta, Scott Morrison
+Authors: Bhavik Mehta, Kim Morrison
 -/
-import Mathlib.CategoryTheory.Adjunction.Over
+import Mathlib.CategoryTheory.Comma.Over.Pullback
 import Mathlib.CategoryTheory.Adjunction.Reflective
 import Mathlib.CategoryTheory.Adjunction.Restrict
 import Mathlib.CategoryTheory.Limits.Shapes.Images
+import Mathlib.CategoryTheory.Limits.Shapes.Pullback.CommSq
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Basic
 
 /-!
 # Monomorphisms over a fixed object
@@ -23,12 +25,13 @@ We provide
 * `def pullback [HasPullbacks C] (f : X ⟶ Y) : MonoOver Y ⥤ MonoOver X`
 * `def map (f : X ⟶ Y) [Mono f] : MonoOver X ⥤ MonoOver Y`
 * `def «exists» [HasImages C] (f : X ⟶ Y) : MonoOver X ⥤ MonoOver Y`
+
 and prove their basic properties and relationships.
 
 ## Notes
 
 This development originally appeared in Bhavik Mehta's "Topos theory for Lean" repository,
-and was ported to mathlib by Scott Morrison.
+and was ported to mathlib by Kim Morrison.
 
 -/
 
@@ -39,7 +42,7 @@ noncomputable section
 
 namespace CategoryTheory
 
-open CategoryTheory CategoryTheory.Category CategoryTheory.Limits
+open CategoryTheory CategoryTheory.Category CategoryTheory.Limits CategoryTheory.Functor
 
 variable {C : Type u₁} [Category.{v₁} C] {X Y Z : C}
 variable {D : Type u₂} [Category.{v₂} D]
@@ -50,12 +53,14 @@ This isn't skeletal, so it's not a partial order.
 Later we define `Subobject X` as the quotient of this by isomorphisms.
 -/
 def MonoOver (X : C) :=
-  FullSubcategory fun f : Over X => Mono f.hom
+  ObjectProperty.FullSubcategory fun f : Over X => Mono f.hom
 
 instance (X : C) : Category (MonoOver X) :=
-  FullSubcategory.category _
+  ObjectProperty.FullSubcategory.category _
 
 namespace MonoOver
+
+instance mono_obj_hom (S : MonoOver X) : Mono S.obj.hom := S.2
 
 /-- Construct a `MonoOver X`. -/
 @[simps]
@@ -65,7 +70,7 @@ def mk' {X A : C} (f : A ⟶ X) [hf : Mono f] : MonoOver X where
 
 /-- The inclusion from monomorphisms over X to morphisms over X. -/
 def forget (X : C) : MonoOver X ⥤ Over X :=
-  fullSubcategoryInclusion _
+  ObjectProperty.ι _
 
 instance : CoeOut (MonoOver X) C where coe Y := Y.obj.left
 
@@ -91,24 +96,28 @@ theorem forget_obj_hom {f} : ((forget X).obj f).hom = f.arrow :=
 
 /-- The forget functor `MonoOver X ⥤ Over X` is fully faithful. -/
 def fullyFaithfulForget (X : C) : (forget X).FullyFaithful :=
-  fullyFaithfulFullSubcategoryInclusion _
+  ObjectProperty.fullyFaithfulι _
 
 instance : (forget X).Full :=
-  FullSubcategory.full _
+  ObjectProperty.full_ι _
 
 instance : (forget X).Faithful :=
-  FullSubcategory.faithful _
+  ObjectProperty.faithful_ι _
 
 instance mono (f : MonoOver X) : Mono f.arrow :=
   f.property
 
-/-- The category of monomorphisms over X is a thin category,
+instance {X : C} {f : MonoOver X} : Mono ((MonoOver.forget X).obj f).hom := f.mono
+
+/-- The category of monomorphisms over X is a thin category,s
 which makes defining its skeleton easy. -/
 instance isThin {X : C} : Quiver.IsThin (MonoOver X) := fun f g =>
   ⟨by
     intro h₁ h₂
     apply Over.OverMorphism.ext
-    erw [← cancel_mono g.arrow, Over.w h₁, Over.w h₂]⟩
+    rw [← cancel_mono g.arrow]
+    erw [Over.w h₁]
+    erw [Over.w h₂]⟩
 
 @[reassoc]
 theorem w {f g : MonoOver X} (k : f ⟶ g) : k.left ≫ g.arrow = f.arrow :=
@@ -116,21 +125,28 @@ theorem w {f g : MonoOver X} (k : f ⟶ g) : k.left ≫ g.arrow = f.arrow :=
 
 /-- Convenience constructor for a morphism in monomorphisms over `X`. -/
 abbrev homMk {f g : MonoOver X} (h : f.obj.left ⟶ g.obj.left)
-    (w : h ≫ g.arrow = f.arrow := by aesop_cat) : f ⟶ g :=
+    (w : h ≫ g.arrow = f.arrow := by cat_disch) : f ⟶ g :=
   Over.homMk h w
 
 /-- Convenience constructor for an isomorphism in monomorphisms over `X`. -/
 @[simps]
 def isoMk {f g : MonoOver X} (h : f.obj.left ≅ g.obj.left)
-    (w : h.hom ≫ g.arrow = f.arrow := by aesop_cat) : f ≅ g where
+    (w : h.hom ≫ g.arrow = f.arrow := by cat_disch) : f ≅ g where
   hom := homMk h.hom w
   inv := homMk h.inv (by rw [h.inv_comp_eq, w])
 
 /-- If `f : MonoOver X`, then `mk' f.arrow` is of course just `f`, but not definitionally, so we
-    package it as an isomorphism. -/
-@[simp]
+package it as an isomorphism. -/
+@[simps!]
 def mk'ArrowIso {X : C} (f : MonoOver X) : mk' f.arrow ≅ f :=
   isoMk (Iso.refl _)
+
+instance {A B : MonoOver X} (f : A ⟶ B) [IsIso f] : IsIso f.left :=
+  inferInstanceAs (IsIso ((MonoOver.forget _ ⋙ Over.forget _).map f))
+
+lemma isIso_iff_isIso_left {A B : MonoOver X} (f : A ⟶ B) :
+    IsIso f ↔ IsIso f.left :=
+  (isIso_iff_of_reflects_iso _ (MonoOver.forget X ⋙ Over.forget _)).symm
 
 /-- Lift a functor between over categories to a functor between `MonoOver` categories,
 given suitable evidence that morphisms are taken to monomorphisms.
@@ -217,27 +233,47 @@ theorem pullback_obj_arrow (f : X ⟶ Y) (g : MonoOver Y) :
 
 end Pullback
 
-section Map
+section IsPullback
 
-attribute [instance] mono_comp
+/--
+Given two monomorphisms `S` and `T` over `X` and `Y` and two morphisms `f` and `f'` between them
+forming the following pullback square:
+
+```
+(T : C) -f'-> (S : C)
+   |             |
+T.arrow       S.arrow
+   |             |
+   v             v
+   Y -----f----> X
+```
+
+we get an isomorphism between `T` and the pullback of `S` along `f` through the `pullback` functor.
+-/
+def pullbackObjIsoOfIsPullback [HasPullbacks C] {X Y : C} (f : Y ⟶ X) (S : MonoOver X)
+    (T : MonoOver Y) (f' : (T : C) ⟶ (S : C))
+    (h : IsPullback f' T.arrow S.arrow f) :
+    (pullback f).obj S ≅ T :=
+  isoMk ((IsPullback.isoPullback h).symm) (by simp)
+
+end IsPullback
+
+section Map
 
 /-- We can map monomorphisms over `X` to monomorphisms over `Y`
 by post-composition with a monomorphism `f : X ⟶ Y`.
 -/
 def map (f : X ⟶ Y) [Mono f] : MonoOver X ⥤ MonoOver Y :=
-  lift (Over.map f) fun g => by apply mono_comp g.arrow f
+  lift (Over.map f) fun g => mono_comp g.arrow f
 
 /-- `MonoOver.map` commutes with composition (up to a natural isomorphism). -/
 def mapComp (f : X ⟶ Y) (g : Y ⟶ Z) [Mono f] [Mono g] : map (f ≫ g) ≅ map f ⋙ map g :=
   liftIso _ _ (Over.mapComp _ _) ≪≫ (liftComp _ _ _ _).symm
 
-variable (X)
-
+variable (X) in
 /-- `MonoOver.map` preserves the identity (up to a natural isomorphism). -/
 def mapId : map (𝟙 X) ≅ 𝟭 _ :=
   liftIso _ _ (Over.mapId X) ≪≫ liftId
-
-variable {X}
 
 @[simp]
 theorem map_obj_left (f : X ⟶ Y) [Mono f] (g : MonoOver X) : ((map f).obj g : C) = g.obj.left :=
@@ -269,7 +305,7 @@ section
 variable (X)
 
 /-- An equivalence of categories `e` between `C` and `D` induces an equivalence between
-    `MonoOver X` and `MonoOver (e.functor.obj X)` whenever `X` is an object of `C`. -/
+`MonoOver X` and `MonoOver (e.functor.obj X)` whenever `X` is an object of `C`. -/
 @[simps]
 def congr (e : C ≌ D) : MonoOver X ≌ MonoOver (e.functor.obj X) where
   functor :=
@@ -357,17 +393,14 @@ def imageForgetAdj : image ⊣ forget X :=
                     e := k.left
                     fac := Over.w k }
             · apply image.lift_fac
-          left_inv := fun k => Subsingleton.elim _ _
-          right_inv := fun k => by
-            ext1
-            change factorThruImage _ ≫ image.lift _ = _
-            rw [← cancel_mono g.arrow, assoc, image.lift_fac, image.fac f.hom]
-            exact (Over.w k).symm } }
+          left_inv := fun _ => Subsingleton.elim _ _
+          right_inv := fun k => by simp } }
 
 instance : (forget X).IsRightAdjoint :=
   ⟨_, ⟨imageForgetAdj⟩⟩
 
 instance reflective : Reflective (forget X) where
+  L := image
   adj := imageForgetAdj
 
 /-- Forgetting that a monomorphism over `X` is a monomorphism, then taking its image,

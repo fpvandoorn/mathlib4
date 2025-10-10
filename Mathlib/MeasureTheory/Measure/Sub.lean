@@ -3,7 +3,7 @@ Copyright (c) 2022 Martin Zinkevich. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Martin Zinkevich
 -/
-import Mathlib.MeasureTheory.Measure.Typeclasses
+import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
 
 /-!
 # Subtraction of measures
@@ -56,6 +56,13 @@ theorem zero_sub : 0 - μ = 0 :=
 theorem sub_self : μ - μ = 0 :=
   sub_eq_zero_of_le le_rfl
 
+@[simp]
+protected theorem sub_zero : μ - 0 = μ := by
+  rw [sub_def]
+  apply le_antisymm
+  · simp [sInf_le]
+  · simp
+
 /-- This application lemma only works in special circumstances. Given knowledge of
 when `μ ≤ ν` and `ν ≤ μ`, a more general application lemma can be written. -/
 theorem sub_apply [IsFiniteMeasure ν] (h₁ : MeasurableSet s) (h₂ : ν ≤ μ) :
@@ -91,7 +98,7 @@ theorem sub_add_cancel_of_le [IsFiniteMeasure ν] (h₁ : ν ≤ μ) : μ - ν +
   rw [add_apply, sub_apply h_s_meas h₁, tsub_add_cancel_of_le (h₁ s)]
 
 @[simp]
-lemma add_sub_cancel [IsFiniteMeasure ν] : μ + ν - ν = μ := by
+protected lemma add_sub_cancel [IsFiniteMeasure ν] : μ + ν - ν = μ := by
   ext1 s hs
   rw [sub_apply hs (Measure.le_add_left (le_refl _)), add_apply,
     ENNReal.add_sub_cancel_right (measure_ne_top ν s)]
@@ -102,7 +109,7 @@ theorem restrict_sub_eq_restrict_sub_restrict (h_meas_s : MeasurableSet s) :
   have h_nonempty : { d | μ ≤ d + ν }.Nonempty := ⟨μ, Measure.le_add_right le_rfl⟩
   rw [restrict_sInf_eq_sInf_restrict h_nonempty h_meas_s]
   apply le_antisymm
-  · refine sInf_le_sInf_of_forall_exists_le ?_
+  · refine sInf_le_sInf_of_isCoinitialFor ?_
     intro ν' h_ν'_in
     rw [mem_setOf_eq] at h_ν'_in
     refine ⟨ν'.restrict s, ?_, restrict_le_self⟩
@@ -122,7 +129,7 @@ theorem restrict_sub_eq_restrict_sub_restrict (h_meas_s : MeasurableSet s) :
         exact Measure.le_iff'.1 h_mu_le_add_top _
     · ext1 t h_meas_t
       simp [restrict_apply h_meas_t, restrict_apply (h_meas_t.inter h_meas_s), inter_assoc]
-  · refine sInf_le_sInf_of_forall_exists_le ?_
+  · refine sInf_le_sInf_of_isCoinitialFor ?_
     refine forall_mem_image.2 fun t h_t_in => ⟨t.restrict s, ?_, le_rfl⟩
     rw [Set.mem_setOf_eq, ← restrict_add]
     exact restrict_mono Subset.rfl h_t_in

@@ -142,6 +142,16 @@ theorem decompose_mul_add_right [AddRightCancelMonoid ι] [GradedRing 𝒜] {a :
       @GradedMonoid.GMul.mul ι (fun i => 𝒜 i) _ _ _ _ (decompose 𝒜 a i) b :=
   Subtype.ext <| coe_decompose_mul_add_of_right_mem 𝒜 b.2
 
+theorem coe_decompose_mul_of_left_mem_zero [AddMonoid ι] [GradedRing 𝒜] {a b : A}
+    (a_mem : a ∈ 𝒜 0) : (decompose 𝒜 (a * b) j : A) = a * decompose 𝒜 b j := by
+  lift a to 𝒜 0 using a_mem
+  rw [decompose_mul, decompose_coe, coe_of_mul_apply_of_mem_zero]
+
+theorem coe_decompose_mul_of_right_mem_zero [AddMonoid ι] [GradedRing 𝒜] {a b : A}
+    (b_mem : b ∈ 𝒜 0) : (decompose 𝒜 (a * b) i : A) = decompose 𝒜 a i * b := by
+  lift b to 𝒜 0 using b_mem
+  rw [decompose_mul, decompose_coe, coe_mul_of_apply_of_mem_zero]
+
 end DirectSum
 
 end AddCancelMonoid
@@ -178,7 +188,8 @@ namespace DirectSum
 
 /-- If `A` is graded by `ι` with degree `i` component `𝒜 i`, then it is isomorphic as
 an algebra to a direct sum of components. -/
--- Porting note: deleted [simps] and added the corresponding lemmas by hand
+-- We have to write the `@[simps]` lemmas by hand to see through the
+-- `AlgEquiv.symm (decomposeAddEquiv 𝒜).symm`.
 def decomposeAlgEquiv : A ≃ₐ[R] ⨁ i, 𝒜 i :=
   AlgEquiv.symm
     { (decomposeAddEquiv 𝒜).symm with
@@ -207,7 +218,7 @@ end DirectSum
 
 open DirectSum
 
-/-- The projection maps of graded algebra-/
+/-- The projection maps of graded algebra -/
 def GradedAlgebra.proj (𝒜 : ι → Submodule R A) [GradedAlgebra 𝒜] (i : ι) : A →ₗ[R] A :=
   (𝒜 i).subtype.comp <| (DFinsupp.lapply i).comp <| (decomposeAlgEquiv 𝒜).toAlgHom.toLinearMap
 
@@ -231,26 +242,18 @@ section CanonicalOrder
 open SetLike.GradedMonoid DirectSum
 
 variable [Semiring A] [DecidableEq ι]
-variable [CanonicallyOrderedAddCommMonoid ι]
+variable [AddCommMonoid ι] [PartialOrder ι] [CanonicallyOrderedAdd ι]
 variable [SetLike σ A] [AddSubmonoidClass σ A] (𝒜 : ι → σ) [GradedRing 𝒜]
 
-/-- If `A` is graded by a canonically ordered add monoid, then the projection map `x ↦ x₀` is a ring
-homomorphism.
+/-- If `A` is graded by a canonically ordered additive monoid, then the projection map `x ↦ x₀`
+is a ring homomorphism.
 -/
 @[simps]
 def GradedRing.projZeroRingHom : A →+* A where
   toFun a := decompose 𝒜 a 0
-  map_one' :=
-    -- Porting note: qualified `one_mem`
-    decompose_of_mem_same 𝒜 SetLike.GradedOne.one_mem
-  map_zero' := by
-    simp only -- Porting note: added
-    rw [decompose_zero]
-    rfl
-  map_add' _ _ := by
-    simp only -- Porting note: added
-    rw [decompose_add]
-    rfl
+  map_one' := decompose_of_mem_same 𝒜 SetLike.GradedOne.one_mem
+  map_zero' := by rw [decompose_zero, zero_apply, ZeroMemClass.coe_zero]
+  map_add' _ _ := by rw [decompose_add, add_apply, AddMemClass.coe_add]
   map_mul' := by
     refine DirectSum.Decomposition.inductionOn 𝒜 (fun x => ?_) ?_ ?_
     · simp only [zero_mul, decompose_zero, zero_apply, ZeroMemClass.coe_zero]
@@ -258,21 +261,19 @@ def GradedRing.projZeroRingHom : A →+* A where
       refine DirectSum.Decomposition.inductionOn 𝒜 ?_ ?_ ?_
       · simp only [mul_zero, decompose_zero, zero_apply, ZeroMemClass.coe_zero]
       · rintro j ⟨c', hc'⟩
-        simp only [Subtype.coe_mk]
+        simp only
         by_cases h : i + j = 0
         · rw [decompose_of_mem_same 𝒜
               (show c * c' ∈ 𝒜 0 from h ▸ SetLike.GradedMul.mul_mem hc hc'),
-            decompose_of_mem_same 𝒜 (show c ∈ 𝒜 0 from (add_eq_zero_iff.mp h).1 ▸ hc),
-            decompose_of_mem_same 𝒜 (show c' ∈ 𝒜 0 from (add_eq_zero_iff.mp h).2 ▸ hc')]
+            decompose_of_mem_same 𝒜 (show c ∈ 𝒜 0 from (add_eq_zero.mp h).1 ▸ hc),
+            decompose_of_mem_same 𝒜 (show c' ∈ 𝒜 0 from (add_eq_zero.mp h).2 ▸ hc')]
         · rw [decompose_of_mem_ne 𝒜 (SetLike.GradedMul.mul_mem hc hc') h]
-          cases' show i ≠ 0 ∨ j ≠ 0 by rwa [add_eq_zero_iff, not_and_or] at h with h' h'
+          rcases show i ≠ 0 ∨ j ≠ 0 by rwa [add_eq_zero, not_and_or] at h with h' | h'
           · simp only [decompose_of_mem_ne 𝒜 hc h', zero_mul]
           · simp only [decompose_of_mem_ne 𝒜 hc' h', mul_zero]
       · intro _ _ hd he
-        simp only at hd he -- Porting note: added
         simp only [mul_add, decompose_add, add_apply, AddMemClass.coe_add, hd, he]
     · rintro _ _ ha hb _
-      simp only at ha hb -- Porting note: added
       simp only [add_mul, decompose_add, add_apply, AddMemClass.coe_add, ha, hb]
 
 section GradeZero
@@ -310,7 +311,7 @@ theorem coe_decompose_mul_of_right_mem_of_not_le (b_mem : b ∈ 𝒜 i) (h : ¬i
   lift b to 𝒜 i using b_mem
   rwa [decompose_mul, decompose_coe, coe_mul_of_apply_of_not_le]
 
-variable [Sub ι] [OrderedSub ι] [ContravariantClass ι ι (· + ·) (· ≤ ·)]
+variable [Sub ι] [OrderedSub ι] [AddLeftReflectLE ι]
 
 theorem coe_decompose_mul_of_left_mem_of_le (a_mem : a ∈ 𝒜 i) (h : i ≤ n) :
     (decompose 𝒜 (a * b) n : A) = a * decompose 𝒜 b (n - i) := by
@@ -350,7 +351,7 @@ noncomputable def coeAlgEquiv (hM : DirectSum.IsInternal M) :
 
 /-- Given an `R`-algebra `A` and a family `ι → Submodule R A` of submodules
 parameterized by an additive monoid `ι`
-and statisfying `SetLike.GradedMonoid M` (essentially, is multiplicative)
+and satisfying `SetLike.GradedMonoid M` (essentially, is multiplicative)
 such that `DirectSum.IsInternal M` (`A` is the direct sum of the `M i`),
 we endow `A` with the structure of a graded algebra.
 The submodules are the *homogeneous* parts. -/

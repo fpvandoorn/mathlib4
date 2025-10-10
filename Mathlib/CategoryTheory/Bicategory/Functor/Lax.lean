@@ -6,6 +6,7 @@ Authors: Calle Sönne
 
 import Mathlib.CategoryTheory.Bicategory.Functor.Prelax
 import Mathlib.Tactic.CategoryTheory.Slice
+import Mathlib.Tactic.CategoryTheory.ToApp
 
 /-!
 # Lax functors
@@ -52,33 +53,33 @@ and do not need to strictly preserve the identity. Instead, there are specified 
 associator, the left unitor, and the right unitor modulo some adjustments of domains and codomains
 of 2-morphisms.
 -/
-structure LaxFunctor (B: Type u₁) [Bicategory.{w₁, v₁} B] (C : Type u₂) [Bicategory.{w₂, v₂} C]
+structure LaxFunctor (B : Type u₁) [Bicategory.{w₁, v₁} B] (C : Type u₂) [Bicategory.{w₂, v₂} C]
     extends PrelaxFunctor B C where
   /-- The 2-morphism underlying the lax unity constraint. -/
   mapId (a : B) : 𝟙 (obj a) ⟶ map (𝟙 a)
   /-- The 2-morphism underlying the lax functoriality constraint. -/
   mapComp {a b c : B} (f : a ⟶ b) (g : b ⟶ c) : map f ≫ map g ⟶ map (f ≫ g)
-  /-- Naturality of the lax functoriality constraight, on the left. -/
+  /-- Naturality of the lax functoriality constraint, on the left. -/
   mapComp_naturality_left :
     ∀ {a b c : B} {f f' : a ⟶ b} (η : f ⟶ f') (g : b ⟶ c),
-      mapComp f g ≫ map₂ (η ▷ g) = map₂ η ▷ map g ≫ mapComp f' g:= by aesop_cat
-  /-- Naturality of the lax functoriality constraight, on the right. -/
+      mapComp f g ≫ map₂ (η ▷ g) = map₂ η ▷ map g ≫ mapComp f' g:= by cat_disch
+  /-- Naturality of the lax functoriality constraint, on the right. -/
   mapComp_naturality_right :
     ∀ {a b c : B} (f : a ⟶ b) {g g' : b ⟶ c} (η : g ⟶ g'),
-     mapComp f g ≫ map₂ (f ◁ η) = map f ◁ map₂ η ≫ mapComp f g' := by aesop_cat
-  /-- Lax associativity -/
+     mapComp f g ≫ map₂ (f ◁ η) = map f ◁ map₂ η ≫ mapComp f g' := by cat_disch
+  /-- Lax associativity. -/
   map₂_associator :
     ∀ {a b c d : B} (f : a ⟶ b) (g : b ⟶ c) (h : c ⟶ d),
       mapComp f g ▷ map h ≫ mapComp (f ≫ g) h ≫ map₂ (α_ f g h).hom =
-      (α_ (map f) (map g) (map h)).hom ≫ map f ◁ mapComp g h ≫ mapComp f (g ≫ h) := by aesop_cat
-  /-- Lax left unity -/
+      (α_ (map f) (map g) (map h)).hom ≫ map f ◁ mapComp g h ≫ mapComp f (g ≫ h) := by cat_disch
+  /-- Lax left unity. -/
   map₂_leftUnitor :
     ∀ {a b : B} (f : a ⟶ b),
-      map₂ (λ_ f).inv = (λ_ (map f)).inv ≫ mapId a ▷ map f ≫ mapComp (𝟙 a) f := by aesop_cat
-  /-- Lax right unity -/
+      map₂ (λ_ f).inv = (λ_ (map f)).inv ≫ mapId a ▷ map f ≫ mapComp (𝟙 a) f := by cat_disch
+  /-- Lax right unity. -/
   map₂_rightUnitor :
     ∀ {a b : B} (f : a ⟶ b),
-      map₂ (ρ_ f).inv = (ρ_ (map f)).inv ≫ map f ◁ mapId b ≫ mapComp f (𝟙 b) := by aesop_cat
+      map₂ (ρ_ f).inv = (ρ_ (map f)).inv ≫ map f ◁ mapId b ≫ mapComp f (𝟙 b) := by cat_disch
 
 initialize_simps_projections LaxFunctor (+toPrelaxFunctor, -obj, -map, -map₂)
 
@@ -86,36 +87,36 @@ namespace LaxFunctor
 
 variable {B : Type u₁} [Bicategory.{w₁, v₁} B] {C : Type u₂} [Bicategory.{w₂, v₂} C]
 
-attribute [reassoc (attr := simp)]
+attribute [reassoc (attr := simp), to_app (attr := simp)]
   mapComp_naturality_left mapComp_naturality_right map₂_associator
-attribute [simp, reassoc] map₂_leftUnitor map₂_rightUnitor
+attribute [simp, reassoc, to_app] map₂_leftUnitor map₂_rightUnitor
 
 /-- The underlying prelax functor. -/
 add_decl_doc LaxFunctor.toPrelaxFunctor
 
 variable (F : LaxFunctor B C)
 
-@[reassoc]
+@[reassoc, to_app]
 lemma mapComp_assoc_left {a b c d : B} (f : a ⟶ b) (g : b ⟶ c) (h : c ⟶ d) :
     F.mapComp f g ▷ F.map h ≫ F.mapComp (f ≫ g) h = (α_ (F.map f) (F.map g) (F.map h)).hom ≫
       F.map f ◁ F.mapComp g h ≫ F.mapComp f (g ≫ h) ≫ F.map₂ (α_ f g h).inv := by
   rw [← F.map₂_associator_assoc, ← F.map₂_comp]
   simp only [Iso.hom_inv_id, PrelaxFunctor.map₂_id, comp_id]
 
-@[reassoc]
+@[reassoc, to_app]
 lemma mapComp_assoc_right {a b c d : B} (f : a ⟶ b) (g : b ⟶ c) (h : c ⟶ d) :
     F.map f ◁ F.mapComp g h ≫ F.mapComp f (g ≫ h) =
       (α_ (F.map f) (F.map g) (F.map h)).inv ≫ F.mapComp f g ▷ F.map h ≫
         F.mapComp (f ≫ g) h ≫ F.map₂ (α_ f g h).hom := by
   simp only [map₂_associator, Iso.inv_hom_id_assoc]
 
-@[reassoc]
+@[reassoc, to_app]
 lemma map₂_leftUnitor_hom {a b : B} (f : a ⟶ b) :
     (λ_ (F.map f)).hom = F.mapId a ▷ F.map f ≫ F.mapComp (𝟙 a) f ≫ F.map₂ (λ_ f).hom := by
   rw [← PrelaxFunctor.map₂Iso_hom, ← assoc, ← Iso.comp_inv_eq, ← Iso.eq_inv_comp]
   simp only [Functor.mapIso_inv, PrelaxFunctor.mapFunctor_map, map₂_leftUnitor]
 
-@[reassoc]
+@[reassoc, to_app]
 lemma map₂_rightUnitor_hom {a b : B} (f : a ⟶ b) :
     (ρ_ (F.map f)).hom = F.map f ◁ F.mapId b ≫ F.mapComp f (𝟙 b) ≫ F.map₂ (ρ_ f).hom := by
   rw [← PrelaxFunctor.map₂Iso_hom, ← assoc, ← Iso.comp_inv_eq, ← Iso.eq_inv_comp]
@@ -147,7 +148,7 @@ def comp {D : Type u₃} [Bicategory.{w₃, v₃} D] (F : LaxFunctor B C) (G : L
   map₂_associator := fun f g h => by
     dsimp
     slice_rhs 1 3 =>
-      rw [whiskerLeft_comp, assoc, ← mapComp_naturality_right, ← map₂_associator_assoc]
+      rw [Bicategory.whiskerLeft_comp, assoc, ← mapComp_naturality_right, ← map₂_associator_assoc]
     slice_rhs 3 5 =>
       rw [← G.map₂_comp, ← G.map₂_comp, ← F.map₂_associator, G.map₂_comp, G.map₂_comp]
     slice_lhs 1 3 =>
@@ -160,22 +161,21 @@ def comp {D : Type u₃} [Bicategory.{w₃, v₃} D] (F : LaxFunctor B C) (G : L
   map₂_rightUnitor := fun f => by
     dsimp
     simp only [map₂_rightUnitor, PrelaxFunctor.map₂_comp, assoc, mapComp_naturality_right_assoc,
-      whiskerLeft_comp]
+      Bicategory.whiskerLeft_comp]
 
 /-- A structure on an Lax functor that promotes an Lax functor to a pseudofunctor.
 
 See `Pseudofunctor.mkOfLax`. -/
 structure PseudoCore (F : LaxFunctor B C) where
+  /-- The isomorphism giving rise to the lax unity constraint -/
   mapIdIso (a : B) : F.map (𝟙 a) ≅ 𝟙 (F.obj a)
+  /-- The isomorphism giving rise to the lax functoriality constraint -/
   mapCompIso {a b c : B} (f : a ⟶ b) (g : b ⟶ c) : F.map (f ≫ g) ≅ F.map f ≫ F.map g
-  mapIdIso_inv {a : B} : (mapIdIso a).inv = F.mapId a := by aesop_cat
+  /-- `mapIdIso` gives rise to the lax unity constraint -/
+  mapIdIso_inv {a : B} : (mapIdIso a).inv = F.mapId a := by cat_disch
+  /-- `mapCompIso` gives rise to the lax functoriality constraint -/
   mapCompIso_inv {a b c : B} (f : a ⟶ b) (g : b ⟶ c) : (mapCompIso f g).inv = F.mapComp f g := by
-    aesop_cat
-
-attribute [nolint docBlame] CategoryTheory.LaxFunctor.PseudoCore.mapIdIso
-  CategoryTheory.LaxFunctor.PseudoCore.mapCompIso
-  CategoryTheory.LaxFunctor.PseudoCore.mapIdIso_inv
-  CategoryTheory.LaxFunctor.PseudoCore.mapCompIso_inv
+    cat_disch
 
 attribute [simp] PseudoCore.mapIdIso_inv PseudoCore.mapCompIso_inv
 

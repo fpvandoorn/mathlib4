@@ -3,7 +3,7 @@ Copyright (c) 2023 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Adam Topaz
 -/
-
+import Mathlib.CategoryTheory.Sites.Precoverage
 import Mathlib.CategoryTheory.Sites.Sheaf
 
 /-!
@@ -47,6 +47,8 @@ the following sources:
 
 namespace CategoryTheory
 
+universe w w'
+
 variable {C D : Type _} [Category C] [Category D]
 
 open Limits
@@ -65,6 +67,13 @@ This is used in the definition of a coverage.
 def FactorsThruAlong {X Y : C} (S : Presieve Y) (T : Presieve X) (f : Y ⟶ X) : Prop :=
   ∀ ⦃Z : C⦄ ⦃g : Z ⟶ Y⦄, S g →
   ∃ (W : C) (i : Z ⟶ W) (e : W ⟶ X), T e ∧ i ≫ e = g ≫ f
+
+lemma FactorsThruAlong.pullbackArrows {X Y : C} (f : X ⟶ Y)
+    (R : Presieve Y) [R.HasPullbacks f] :
+    (Presieve.pullbackArrows f R).FactorsThruAlong R f := by
+  intro Z g ⟨W, b, hb⟩
+  have := R.hasPullback f hb
+  refine ⟨_, pullback.fst _ _, b, hb, pullback.condition⟩
 
 /--
 Given `S T : Presieve X`, we say that `S` factors through `T` if any morphism in `S`
@@ -142,18 +151,19 @@ Explicitly, this condition says that whenever `S` is a covering presieve for `X`
 such that `T` factors through `S` along `f`.
 -/
 @[ext]
-structure Coverage where
-  /-- The collection of covering presieves for an object `X`. -/
-  covering : ∀ (X : C), Set (Presieve X)
+structure Coverage extends Precoverage C where
   /-- Given any covering sieve `S` on `X` and a morphism `f : Y ⟶ X`, there exists
-    some covering sieve `T` on `Y` such that `T` factors through `S` along `f`. -/
-  pullback : ∀ ⦃X Y : C⦄ (f : Y ⟶ X) (S : Presieve X) (_ : S ∈ covering X),
-    ∃ (T : Presieve Y), T ∈ covering Y ∧ T.FactorsThruAlong S f
+  some covering sieve `T` on `Y` such that `T` factors through `S` along `f`. -/
+  pullback : ∀ ⦃X Y : C⦄ (f : Y ⟶ X) (S : Presieve X) (_ : S ∈ coverings X),
+    ∃ (T : Presieve Y), T ∈ coverings Y ∧ T.FactorsThruAlong S f
 
 namespace Coverage
 
+@[deprecated (since := "2025-08-28")]
+alias covering := Precoverage.coverings
+
 instance : CoeFun (Coverage C) (fun _ => (X : C) → Set (Presieve X)) where
-  coe := covering
+  coe J := J.coverings
 
 variable (C) in
 /--
@@ -163,7 +173,7 @@ If `J` is a Grothendieck topology, and `K` is the associated coverage, then a pr
 covering sieve for `J`.
 -/
 def ofGrothendieck (J : GrothendieckTopology C) : Coverage C where
-  covering X := { S | Sieve.generate S ∈ J X }
+  coverings X := { S | Sieve.generate S ∈ J X }
   pullback := by
     intro X Y f S (hS : Sieve.generate S ∈ J X)
     refine ⟨(Sieve.generate S).pullback f, ?_, fun Z g h => h⟩
@@ -236,13 +246,16 @@ def toGrothendieck (K : Coverage C) : GrothendieckTopology C where
       intro Z g hg
       rw [← Sieve.pullback_comp]
       exact hS hg
-  transitive' X S hS R hR := .transitive _ _ _ hS hR
+  transitive' _ _ hS _ hR := .transitive _ _ _ hS hR
+
+lemma mem_toGrothendieck {K : Coverage C} {X : C} {S : Sieve X} :
+    S ∈ K.toGrothendieck C X ↔ Saturate K X S := .rfl
 
 instance : PartialOrder (Coverage C) where
-  le A B := A.covering ≤ B.covering
-  le_refl A X := le_refl _
-  le_trans A B C h1 h2 X := le_trans (h1 X) (h2 X)
-  le_antisymm A B h1 h2 := Coverage.ext <| funext <|
+  le A B := A.coverings ≤ B.coverings
+  le_refl _ _ := le_refl _
+  le_trans _ _ _ h1 h2 X := le_trans (h1 X) (h2 X)
+  le_antisymm _ _ h1 h2 := Coverage.ext <| funext <|
     fun X => le_antisymm (h1 X) (h2 X)
 
 variable (C) in
@@ -275,8 +288,8 @@ it is the infimum of all Grothendieck topologies whose associated coverage conta
 theorem toGrothendieck_eq_sInf (K : Coverage C) : toGrothendieck _ K =
     sInf {J | K ≤ ofGrothendieck _ J } := by
   apply le_antisymm
-  · apply le_sInf; intro J hJ
-    intro X S hS
+  · apply le_sInf
+    intro J hJ X S hS
     induction hS with
     | of X S hS => apply hJ; assumption
     | top => apply J.top_mem
@@ -287,7 +300,7 @@ theorem toGrothendieck_eq_sInf (K : Coverage C) : toGrothendieck _ K =
 
 instance : SemilatticeSup (Coverage C) where
   sup x y :=
-  { covering := fun B ↦ x.covering B ∪ y.covering B
+  { coverings := fun B ↦ x B ∪ y B
     pullback := by
       rintro X Y f S (hx | hy)
       · obtain ⟨T, hT⟩ := x.pullback f S hx
@@ -301,7 +314,7 @@ instance : SemilatticeSup (Coverage C) where
 
 @[simp]
 lemma sup_covering (x y : Coverage C) (B : C) :
-    (x ⊔ y).covering B = x.covering B ∪ y.covering B :=
+    (x ⊔ y) B = x B ∪ y B :=
   rfl
 
 /--
@@ -309,10 +322,37 @@ Any sieve that contains a covering presieve for a coverage is a covering sieve f
 Grothendieck topology.
 -/
 theorem mem_toGrothendieck_sieves_of_superset (K : Coverage C) {X : C} {S : Sieve X}
-    {R : Presieve X} (h : R ≤ S) (hR : R ∈ K.covering X) : S ∈ (K.toGrothendieck C).sieves X :=
+    {R : Presieve X} (h : R ≤ S) (hR : R ∈ K X) : S ∈ (K.toGrothendieck C) X :=
   K.saturate_of_superset ((Sieve.generate_le_iff _ _).mpr h) (Coverage.Saturate.of X _ hR)
 
 end Coverage
+
+/-- Any pretopology is a coverage. -/
+def Pretopology.toCoverage [HasPullbacks C] (J : Pretopology C) : Coverage C where
+  coverings := J
+  pullback _ _ f R hR := ⟨R.pullbackArrows f, J.pullbacks _ _ hR, .pullbackArrows f R⟩
+
+@[simp]
+lemma Pretopology.mem_toCoverage [HasPullbacks C] (J : Pretopology C) {X : C} (S : Presieve X) :
+    S ∈ J.toCoverage X ↔ S ∈ J X := .rfl
+
+lemma Pretopology.toGrothendieck_toCoverage [HasPullbacks C] (J : Pretopology C) :
+    J.toCoverage.toGrothendieck = J.toGrothendieck := by
+  ext T S
+  rw [mem_toGrothendieck, Coverage.mem_toGrothendieck]
+  refine ⟨fun h ↦ ?_, fun ⟨R, hR, hle⟩ ↦ ?_⟩
+  · induction h with
+    | of X S hS => use S, hS, Sieve.le_generate S
+    | top X => use Presieve.singleton (𝟙 X), J.has_isos (𝟙 X), le_top
+    | transitive X R S hR hRS hle hfS =>
+        obtain ⟨R', hR', hle⟩ := hle
+        choose S' hS' hS'le using hfS
+        refine ⟨Presieve.bind R' (fun Y f hf ↦ S' (hle _ hf)), ?_, fun Z u hu ↦ ?_⟩
+        · exact J.transitive R' (fun Y f hf ↦ S' (hle Y hf)) hR' fun Y f H ↦ hS' (hle Y H)
+        · obtain ⟨W, g, w, hw, hg, rfl⟩ := hu
+          exact hS'le _ _ hg
+  · refine Coverage.saturate_of_superset _ ?_ (.of _ _ hR)
+    rwa [Sieve.generate_le_iff]
 
 open Coverage
 
@@ -405,7 +445,7 @@ theorem isSheaf_sup (K L : Coverage C) (P : Cᵒᵖ ⥤ Type*) :
   rw [isSheaf_coverage, isSheaf_coverage] at h
   rw [isSheaf_coverage]
   intro X R hR
-  cases' hR with hR hR
+  rcases hR with hR | hR
   · exact h.1 R hR
   · exact h.2 R hR
 
@@ -415,7 +455,7 @@ namespace Presheaf
 
 theorem isSheaf_iff_isLimit_coverage (K : Coverage C) (P : Cᵒᵖ ⥤ D) :
     Presheaf.IsSheaf (toGrothendieck _ K) P ↔ ∀ ⦃X : C⦄ (R : Presieve X),
-      R ∈ K.covering X →
+      R ∈ K X →
         Nonempty (IsLimit (P.mapCone (Sieve.generate R).arrows.cocone.op)) := by
   simp only [Presheaf.IsSheaf, Presieve.isSheaf_coverage, isLimit_iff_isSheafFor,
     ← Presieve.isSheafFor_iff_generate]

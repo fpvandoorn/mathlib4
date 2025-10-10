@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
 import Mathlib.Analysis.Complex.Circle
-import Mathlib.Analysis.NormedSpace.BallAction
+import Mathlib.Analysis.Normed.Module.Ball.Action
 
 /-!
 # Poincaré disc
@@ -22,7 +22,7 @@ local notation "conj'" => starRingEnd ℂ
 
 namespace Complex
 
-/-- Complex unit disc. -/
+/-- The complex unit disc, denoted as `𝔻` withinin the Complex namespace -/
 def UnitDisc : Type :=
   ball (0 : ℂ) 1 deriving TopologicalSpace
 
@@ -31,30 +31,36 @@ open UnitDisc
 
 namespace UnitDisc
 
+/-- Coercion to `ℂ`. -/
+@[coe] protected def coe : 𝔻 → ℂ := Subtype.val
+
 instance instCommSemigroup : CommSemigroup UnitDisc := by unfold UnitDisc; infer_instance
+instance instSemigroupWithZero : SemigroupWithZero UnitDisc := by unfold UnitDisc; infer_instance
+instance instIsCancelMulZero : IsCancelMulZero UnitDisc := by unfold UnitDisc; infer_instance
 instance instHasDistribNeg : HasDistribNeg UnitDisc := by unfold UnitDisc; infer_instance
-instance instCoe : Coe UnitDisc ℂ := ⟨Subtype.val⟩
+instance instCoe : Coe UnitDisc ℂ := ⟨UnitDisc.coe⟩
 
 theorem coe_injective : Injective ((↑) : 𝔻 → ℂ) :=
   Subtype.coe_injective
 
-theorem abs_lt_one (z : 𝔻) : abs (z : ℂ) < 1 :=
+@[simp, norm_cast]
+theorem coe_inj {z w : 𝔻} : (z : ℂ) = w ↔ z = w := Subtype.val_inj
+
+theorem norm_lt_one (z : 𝔻) : ‖(z : ℂ)‖ < 1 :=
   mem_ball_zero_iff.1 z.2
 
-theorem abs_ne_one (z : 𝔻) : abs (z : ℂ) ≠ 1 :=
-  z.abs_lt_one.ne
+theorem norm_ne_one (z : 𝔻) : ‖(z : ℂ)‖ ≠ 1 :=
+  z.norm_lt_one.ne
 
 theorem normSq_lt_one (z : 𝔻) : normSq z < 1 := by
-  convert (Real.sqrt_lt' one_pos).1 z.abs_lt_one
+  convert (Real.sqrt_lt' one_pos).1 z.norm_lt_one
   exact (one_pow 2).symm
 
 theorem coe_ne_one (z : 𝔻) : (z : ℂ) ≠ 1 :=
-  ne_of_apply_ne abs <| (map_one abs).symm ▸ z.abs_ne_one
+  ne_of_apply_ne (‖·‖) <| by simp [z.norm_ne_one]
 
 theorem coe_ne_neg_one (z : 𝔻) : (z : ℂ) ≠ -1 :=
-  ne_of_apply_ne abs <| by
-    rw [abs.map_neg, map_one]
-    exact z.abs_ne_one
+  ne_of_apply_ne (‖·‖) <| by simpa [norm_neg] using z.norm_ne_one
 
 theorem one_add_coe_ne_zero (z : 𝔻) : (1 + z : ℂ) ≠ 0 :=
   mt neg_eq_iff_add_eq_zero.2 z.coe_ne_neg_one.symm
@@ -63,28 +69,22 @@ theorem one_add_coe_ne_zero (z : 𝔻) : (1 + z : ℂ) ≠ 0 :=
 theorem coe_mul (z w : 𝔻) : ↑(z * w) = (z * w : ℂ) :=
   rfl
 
-/-- A constructor that assumes `abs z < 1` instead of `dist z 0 < 1` and returns an element
+/-- A constructor that assumes `‖z‖ < 1` instead of `dist z 0 < 1` and returns an element
 of `𝔻` instead of `↥Metric.ball (0 : ℂ) 1`. -/
-def mk (z : ℂ) (hz : abs z < 1) : 𝔻 :=
+def mk (z : ℂ) (hz : ‖z‖ < 1) : 𝔻 :=
   ⟨z, mem_ball_zero_iff.2 hz⟩
 
 @[simp]
-theorem coe_mk (z : ℂ) (hz : abs z < 1) : (mk z hz : ℂ) = z :=
+theorem coe_mk (z : ℂ) (hz : ‖z‖ < 1) : (mk z hz : ℂ) = z :=
   rfl
 
 @[simp]
-theorem mk_coe (z : 𝔻) (hz : abs (z : ℂ) < 1 := z.abs_lt_one) : mk z hz = z :=
+theorem mk_coe (z : 𝔻) (hz : ‖(z : ℂ)‖ < 1 := z.norm_lt_one) : mk z hz = z :=
   Subtype.eta _ _
 
 @[simp]
-theorem mk_neg (z : ℂ) (hz : abs (-z) < 1) : mk (-z) hz = -mk z (abs.map_neg z ▸ hz) :=
+theorem mk_neg (z : ℂ) (hz : ‖-z‖ < 1) : mk (-z) hz = -mk z (norm_neg z ▸ hz) :=
   rfl
-
-instance : SemigroupWithZero 𝔻 :=
-  { instCommSemigroup with
-    zero := mk 0 <| (map_zero _).trans_lt one_pos
-    zero_mul := fun _ => coe_injective <| zero_mul _
-    mul_zero := fun _ => coe_injective <| mul_zero _ }
 
 @[simp]
 theorem coe_zero : ((0 : 𝔻) : ℂ) = 0 :=
@@ -94,26 +94,29 @@ theorem coe_zero : ((0 : 𝔻) : ℂ) = 0 :=
 theorem coe_eq_zero {z : 𝔻} : (z : ℂ) = 0 ↔ z = 0 :=
   coe_injective.eq_iff' coe_zero
 
+@[simp] theorem mk_zero : mk 0 (by simp) = 0 := rfl
+@[simp] theorem mk_eq_zero {z : ℂ} (hz : ‖z‖ < 1) : mk z hz = 0 ↔ z = 0 := by simp [← coe_inj]
+
 instance : Inhabited 𝔻 :=
   ⟨0⟩
 
-instance circleAction : MulAction circle 𝔻 :=
+instance circleAction : MulAction Circle 𝔻 :=
   mulActionSphereBall
 
-instance isScalarTower_circle_circle : IsScalarTower circle circle 𝔻 :=
+instance isScalarTower_circle_circle : IsScalarTower Circle Circle 𝔻 :=
   isScalarTower_sphere_sphere_ball
 
-instance isScalarTower_circle : IsScalarTower circle 𝔻 𝔻 :=
+instance isScalarTower_circle : IsScalarTower Circle 𝔻 𝔻 :=
   isScalarTower_sphere_ball_ball
 
-instance instSMulCommClass_circle : SMulCommClass circle 𝔻 𝔻 :=
+instance instSMulCommClass_circle : SMulCommClass Circle 𝔻 𝔻 :=
   instSMulCommClass_sphere_ball_ball
 
-instance instSMulCommClass_circle' : SMulCommClass 𝔻 circle 𝔻 :=
+instance instSMulCommClass_circle' : SMulCommClass 𝔻 Circle 𝔻 :=
   SMulCommClass.symm _ _ _
 
 @[simp, norm_cast]
-theorem coe_smul_circle (z : circle) (w : 𝔻) : ↑(z • w) = (z * w : ℂ) :=
+theorem coe_smul_circle (z : Circle) (w : 𝔻) : ↑(z • w) = (z * w : ℂ) :=
   rfl
 
 instance closedBallAction : MulAction (closedBall (0 : ℂ) 1) 𝔻 :=
@@ -132,10 +135,10 @@ instance instSMulCommClass_closedBall : SMulCommClass (closedBall (0 : ℂ) 1) �
 instance instSMulCommClass_closedBall' : SMulCommClass 𝔻 (closedBall (0 : ℂ) 1) 𝔻 :=
   SMulCommClass.symm _ _ _
 
-instance instSMulCommClass_circle_closedBall : SMulCommClass circle (closedBall (0 : ℂ) 1) 𝔻 :=
+instance instSMulCommClass_circle_closedBall : SMulCommClass Circle (closedBall (0 : ℂ) 1) 𝔻 :=
   instSMulCommClass_sphere_closedBall_ball
 
-instance instSMulCommClass_closedBall_circle : SMulCommClass (closedBall (0 : ℂ) 1) circle 𝔻 :=
+instance instSMulCommClass_closedBall_circle : SMulCommClass (closedBall (0 : ℂ) 1) Circle 𝔻 :=
   SMulCommClass.symm _ _ _
 
 @[simp, norm_cast]
@@ -168,10 +171,8 @@ theorem im_neg (z : 𝔻) : (-z).im = -z.im :=
 
 /-- Conjugate point of the unit disc. -/
 def conj (z : 𝔻) : 𝔻 :=
-  mk (conj' ↑z) <| (abs_conj z).symm ▸ z.abs_lt_one
+  mk (conj' ↑z) <| (norm_conj z).symm ▸ z.norm_lt_one
 
--- Porting note: removed `norm_cast` because this is a bad `norm_cast` lemma
--- because both sides have a head coe
 @[simp]
 theorem coe_conj (z : 𝔻) : (z.conj : ℂ) = conj' ↑z :=
   rfl

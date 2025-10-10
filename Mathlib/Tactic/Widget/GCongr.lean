@@ -3,6 +3,7 @@ Copyright (c) 2023 Patrick Massot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot
 -/
+import Batteries.Lean.Position
 import Mathlib.Tactic.Widget.SelectPanelUtils
 import Mathlib.Tactic.GCongr
 
@@ -19,7 +20,7 @@ open Lean Meta Server ProofWidgets
 def makeGCongrString (pos : Array Lean.SubExpr.GoalsLocation) (goalType : Expr)
     (_ : SelectInsertParams) : MetaM (String × String × Option (String.Pos × String.Pos)) := do
 let subexprPos := getGoalLocations pos
-unless goalType.isAppOf `LE.le || goalType.isAppOf `LT.lt || goalType.isAppOf `Int.ModEq do
+unless goalType.isAppOf ``LE.le || goalType.isAppOf ``LT.lt || goalType.isAppOf `Int.ModEq do
   panic! "The goal must be a ≤ or < or ≡."
 let mut goalTypeWithMetaVars := goalType
 for pos in subexprPos do

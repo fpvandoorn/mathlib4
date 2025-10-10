@@ -3,10 +3,11 @@ Copyright (c) 2022 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andrew Yang
 -/
+import Mathlib.AlgebraicGeometry.AffineScheme
 import Mathlib.AlgebraicGeometry.Gluing
 import Mathlib.CategoryTheory.Limits.Opposites
-import Mathlib.AlgebraicGeometry.AffineScheme
 import Mathlib.CategoryTheory.Limits.Shapes.Diagonal
+import Mathlib.CategoryTheory.Monoidal.Cartesian.Over
 
 /-!
 # Fibred products of schemes
@@ -82,12 +83,12 @@ theorem t_id (i : 𝒰.J) : t 𝒰 f g i i = 𝟙 _ := by
     · simp only [Category.assoc, t_fst_snd]
   · rw [← cancel_mono (𝒰.map i)]; simp only [pullback.condition, t_snd, Category.assoc]
 
-/-- The inclusion map of `V i j = (Uᵢ ×[Z] Y) ×[X] Uⱼ ⟶ Uᵢ ×[Z] Y`-/
+/-- The inclusion map of `V i j = (Uᵢ ×[Z] Y) ×[X] Uⱼ ⟶ Uᵢ ×[Z] Y` -/
 abbrev fV (i j : 𝒰.J) : v 𝒰 f g i j ⟶ pullback (𝒰.map i ≫ f) g :=
   pullback.fst _ _
 
 /-- The map `((Xᵢ ×[Z] Y) ×[X] Xⱼ) ×[Xᵢ ×[Z] Y] ((Xᵢ ×[Z] Y) ×[X] Xₖ)` ⟶
-  `((Xⱼ ×[Z] Y) ×[X] Xₖ) ×[Xⱼ ×[Z] Y] ((Xⱼ ×[Z] Y) ×[X] Xᵢ)` needed for gluing   -/
+`((Xⱼ ×[Z] Y) ×[X] Xₖ) ×[Xⱼ ×[Z] Y] ((Xⱼ ×[Z] Y) ×[X] Xᵢ)` needed for gluing -/
 def t' (i j k : 𝒰.J) :
     pullback (fV 𝒰 f g i j) (fV 𝒰 f g i k) ⟶ pullback (fV 𝒰 f g j k) (fV 𝒰 f g j i) := by
   refine (pullbackRightPullbackFstIso ..).hom ≫ ?_
@@ -163,7 +164,6 @@ theorem cocycle_fst_snd (i j k : 𝒰.J) :
 theorem cocycle_snd_fst_fst (i j k : 𝒰.J) :
     t' 𝒰 f g i j k ≫ t' 𝒰 f g j k i ≫ t' 𝒰 f g k i j ≫ pullback.snd _ _ ≫ pullback.fst _ _ ≫
       pullback.fst _ _ = pullback.snd _ _ ≫ pullback.fst _ _ ≫ pullback.fst _ _ := by
-  rw [← cancel_mono (𝒰.map i)]
   simp only [pullback.condition_assoc, t'_snd_fst_fst, t'_fst_snd, t'_snd_snd]
 
 theorem cocycle_snd_fst_snd (i j k : 𝒰.J) :
@@ -190,15 +190,15 @@ theorem cocycle (i j k : 𝒰.J) : t' 𝒰 f g i j k ≫ t' 𝒰 f g j k i ≫ t
       · simp_rw [Category.assoc, cocycle_snd_fst_snd 𝒰 f g i j k]
     · simp_rw [Category.assoc, cocycle_snd_snd 𝒰 f g i j k]
 
-/-- Given `Uᵢ ×[Z] Y`, this is the glued fibered product `X ×[Z] Y`. -/
-@[simps U V f t t', simps (config := .lemmasOnly) J]
+/-- Given `Uᵢ ×[Z] Y`, this is the glued fibred product `X ×[Z] Y`. -/
+@[simps U V f t t', simps -isSimp J]
 def gluing : Scheme.GlueData.{u} where
   J := 𝒰.J
   U i := pullback (𝒰.map i ≫ f) g
   V := fun ⟨i, j⟩ => v 𝒰 f g i j
   -- `p⁻¹(Uᵢ ∩ Uⱼ)` where `p : Uᵢ ×[Z] Y ⟶ Uᵢ ⟶ X`.
-  f i j := pullback.fst _ _
-  f_id i := inferInstance
+  f _ _ := pullback.fst _ _
+  f_id _ := inferInstance
   f_open := inferInstance
   t i j := t 𝒰 f g i j
   t_id i := t_id 𝒰 f g i
@@ -289,7 +289,7 @@ theorem gluedLift_p1 : gluedLift 𝒰 f g s ≫ p1 𝒰 f g = s.fst := by
   rw [← cancel_epi (𝒰.pullbackCover s.fst).fromGlued]
   apply Multicoequalizer.hom_ext
   intro b
-  simp_rw [OpenCover.fromGlued, Multicoequalizer.π_desc_assoc, gluedLift, ← Category.assoc]
+  simp_rw [Cover.fromGlued, Multicoequalizer.π_desc_assoc, gluedLift, ← Category.assoc]
   simp_rw [(𝒰.pullbackCover s.fst).ι_glueMorphisms]
   simp [p1, pullback.condition]
 
@@ -297,9 +297,9 @@ theorem gluedLift_p2 : gluedLift 𝒰 f g s ≫ p2 𝒰 f g = s.snd := by
   rw [← cancel_epi (𝒰.pullbackCover s.fst).fromGlued]
   apply Multicoequalizer.hom_ext
   intro b
-  simp_rw [OpenCover.fromGlued, Multicoequalizer.π_desc_assoc, gluedLift, ← Category.assoc]
+  simp_rw [Cover.fromGlued, Multicoequalizer.π_desc_assoc, gluedLift, ← Category.assoc]
   simp_rw [(𝒰.pullbackCover s.fst).ι_glueMorphisms]
-  simp [p2, pullback.condition]
+  simp [p2]
 
 /-- (Implementation)
 The canonical map `(W ×[X] Uᵢ) ×[W] (Uⱼ ×[Z] Y) ⟶ (Uⱼ ×[Z] Y) ×[X] Uᵢ = V j i` where `W` is
@@ -334,7 +334,7 @@ theorem lift_comp_ι (i : 𝒰.J) :
       (pullback.fst _ _ : pullback (p1 𝒰 f g) (𝒰.map i) ⟶ _) := by
   apply ((gluing 𝒰 f g).openCover.pullbackCover (pullback.fst _ _)).hom_ext
   intro j
-  dsimp only [OpenCover.pullbackCover]
+  dsimp only [Cover.pullbackCover]
   trans pullbackFstιToV 𝒰 f g i j ≫ fV 𝒰 f g j i ≫ (gluing 𝒰 f g).ι _
   · rw [← show _ = fV 𝒰 f g j i ≫ _ from (gluing 𝒰 f g).glue_condition j i]
     simp_rw [← Category.assoc]
@@ -355,8 +355,8 @@ def pullbackP1Iso (i : 𝒰.J) : pullback (p1 𝒰 f g) (𝒰.map i) ≅ pullbac
   · exact
       pullback.lift (pullback.snd _ _) (pullback.fst _ _ ≫ p2 𝒰 f g)
         (by rw [← pullback.condition_assoc, Category.assoc, p_comm])
-  · apply pullback.lift ((gluing 𝒰 f g).ι i) (pullback.fst _ _)
-    rw [gluing_ι, p1, Multicoequalizer.π_desc]
+  · exact pullback.lift ((gluing 𝒰 f g).ι i) (pullback.fst _ _)
+      (by rw [gluing_ι, p1, Multicoequalizer.π_desc])
   · apply pullback.hom_ext
     · simpa using lift_comp_ι 𝒰 f g i
     · simp_rw [Category.assoc, pullback.lift_snd, pullback.lift_fst, Category.id_comp]
@@ -415,6 +415,7 @@ def gluedIsLimit : IsLimit (PullbackCone.mk _ _ (p_comm 𝒰 f g)) := by
       pullbackSymmetry_hom_comp_snd_assoc, pullback.lift_fst_assoc, Category.comp_id,
       pullbackRightPullbackFstIso_hom_fst_assoc, ← pullback.condition_assoc, h₂]
 
+include 𝒰 in
 theorem hasPullback_of_cover : HasPullback f g :=
   ⟨⟨⟨_, gluedIsLimit 𝒰 f g⟩⟩⟩
 
@@ -438,7 +439,7 @@ instance base_affine_hasPullback {C : CommRingCat} {X Y : Scheme} (f : X ⟶ Spe
 
 instance left_affine_comp_pullback_hasPullback {X Y Z : Scheme} (f : X ⟶ Z) (g : Y ⟶ Z)
     (i : Z.affineCover.J) : HasPullback ((Z.affineCover.pullbackCover f).map i ≫ f) g := by
-  simp only [OpenCover.pullbackCover_obj, OpenCover.pullbackCover_map, pullback.condition]
+  simp only [Cover.pullbackCover_obj, Cover.pullbackCover_map, pullback.condition]
   exact hasPullback_assoc_symm f (Z.affineCover.map i) (Z.affineCover.map i) g
 
 instance {X Y Z : Scheme} (f : X ⟶ Z) (g : Y ⟶ Z) : HasPullback f g :=
@@ -450,11 +451,17 @@ instance : HasPullbacks Scheme :=
 instance isAffine_of_isAffine_isAffine_isAffine {X Y Z : Scheme}
     (f : X ⟶ Z) (g : Y ⟶ Z) [IsAffine X] [IsAffine Y] [IsAffine Z] :
     IsAffine (pullback f g) :=
-  isAffine_of_isIso
+  .of_isIso
     (pullback.map f g (Spec.map (Γ.map f.op)) (Spec.map (Γ.map g.op))
-        (ΓSpec.adjunction.unit.app X) (ΓSpec.adjunction.unit.app Y) (ΓSpec.adjunction.unit.app Z)
-        (ΓSpec.adjunction.unit.naturality f) (ΓSpec.adjunction.unit.naturality g) ≫
+        X.toSpecΓ Y.toSpecΓ Z.toSpecΓ
+        (Scheme.toSpecΓ_naturality f) (Scheme.toSpecΓ_naturality g) ≫
       (PreservesPullback.iso Scheme.Spec _ _).inv)
+
+-- The converse is also true. See `Scheme.isEmpty_pullback_iff`.
+theorem _root_.AlgebraicGeometry.Scheme.isEmpty_pullback
+    {X Y S : Scheme.{u}} (f : X ⟶ S) (g : Y ⟶ S)
+    (H : Disjoint (Set.range f.base) (Set.range g.base)) : IsEmpty ↑(Limits.pullback f g) :=
+  isEmpty_of_commSq (IsPullback.of_hasPullback f g).toCommSq H
 
 /-- Given an open cover `{ Xᵢ }` of `X`, then `X ×[Z] Y` is covered by `Xᵢ ×[Z] Y`. -/
 @[simps! J obj map]
@@ -466,7 +473,7 @@ def openCoverOfLeft (𝒰 : OpenCover X) (f : X ⟶ Z) (g : Y ⟶ Z) : OpenCover
       (fun i => pullback.map _ _ _ _ (𝒰.map i) (𝟙 _) (𝟙 _) (Category.comp_id _) (by simp))
       (Equiv.refl 𝒰.J) fun _ => Iso.refl _
   rintro (i : 𝒰.J)
-  simp_rw [OpenCover.pushforwardIso_J, OpenCover.pushforwardIso_map, GlueData.openCover_map,
+  simp_rw [Cover.pushforwardIso_J, Cover.pushforwardIso_map, GlueData.openCover_map,
     GlueData.openCover_J, gluing_J]
   exact pullback.hom_ext (by simp [p1]) (by simp [p2])
 
@@ -479,7 +486,7 @@ def openCoverOfRight (𝒰 : OpenCover Y) (f : X ⟶ Z) (g : Y ⟶ Z) : OpenCove
       (fun i => pullback.map _ _ _ _ (𝟙 _) (𝒰.map i) (𝟙 _) (by simp) (Category.comp_id _))
       (Equiv.refl _) fun i => pullbackSymmetry _ _
   intro i
-  dsimp [OpenCover.bind]
+  dsimp [Cover.bind]
   apply pullback.hom_ext <;> simp
 
 /-- Given an open cover `{ Xᵢ }` of `X` and an open cover `{ Yⱼ }` of `Y`, then
@@ -502,12 +509,12 @@ def openCoverOfLeftRight (𝒰X : X.OpenCover) (𝒰Y : Y.OpenCover) (f : X ⟶ 
 def openCoverOfBase' (𝒰 : OpenCover Z) (f : X ⟶ Z) (g : Y ⟶ Z) : OpenCover (pullback f g) := by
   apply (openCoverOfLeft (𝒰.pullbackCover f) f g).bind
   intro i
-  have := PullbackCone.flipIsLimit <|
-    pasteVertIsPullback rfl (pullbackIsPullback g (𝒰.map i))
-      (pullbackIsPullback (pullback.snd g (𝒰.map i)) (pullback.snd f (𝒰.map i)))
+  haveI := ((IsPullback.of_hasPullback (pullback.snd g (𝒰.map i))
+    (pullback.snd f (𝒰.map i))).paste_horiz (IsPullback.of_hasPullback _ _)).flip
   refine
-    @openCoverOfIsIso
-      (f := (pullbackSymmetry _ _).hom ≫ (limit.isoLimitCone ⟨_, this⟩).inv ≫
+    @coverOfIsIso _ _ _ _ _
+      (f := (pullbackSymmetry (pullback.snd f (𝒰.map i)) (pullback.snd g (𝒰.map i))).hom ≫
+        (limit.isoLimitCone ⟨_, this.isLimit⟩).inv ≫
         pullback.map _ _ _ _ (𝟙 _) (𝟙 _) (𝟙 _) ?_ ?_) inferInstance
   · simp [← pullback.condition]
   · simp only [Category.comp_id, Category.id_comp]
@@ -527,13 +534,69 @@ def openCoverOfBase (𝒰 : OpenCover Z) (f : X ⟶ Z) (g : Y ⟶ Z) : OpenCover
       ((Equiv.prodPUnit 𝒰.J).symm.trans (Equiv.sigmaEquivProd 𝒰.J PUnit).symm) fun _ => Iso.refl _
   intro i
   rw [Iso.refl_hom, Category.id_comp, openCoverOfBase'_map]
-  apply pullback.hom_ext <;> dsimp <;>
-  · simp only [limit.lift_π, PullbackCone.mk_pt, PullbackCone.mk_π_app, Category.assoc,
-      limit.lift_π_assoc, cospan_left, Category.comp_id, limit.isoLimitCone_inv_π,
-      limit.isoLimitCone_inv_π_assoc, PullbackCone.flip_pt, PullbackCone.π_app_left,
-      PullbackCone.π_app_right, PullbackCone.flip_fst, PullbackCone.flip_snd,
-      pullbackSymmetry_hom_comp_snd_assoc, pullbackSymmetry_hom_comp_fst_assoc]
+  ext : 1 <;>
+  · simp only [limit.lift_π, PullbackCone.mk_pt, PullbackCone.mk_π_app, Equiv.trans_apply,
+      Equiv.prodPUnit_symm_apply, Category.assoc, limit.lift_π_assoc, cospan_left, Category.comp_id,
+      limit.isoLimitCone_inv_π_assoc, PullbackCone.π_app_left, IsPullback.cone_fst,
+      pullbackSymmetry_hom_comp_snd_assoc, limit.isoLimitCone_inv_π,
+      PullbackCone.π_app_right, IsPullback.cone_snd, pullbackSymmetry_hom_comp_fst_assoc]
     rfl
+
+variable (f : X ⟶ Y) (𝒰 : Y.OpenCover) (𝒱 : ∀ i, ((𝒰.pullbackCover f).obj i).OpenCover)
+
+/--
+Given `𝒰 i` covering `Y` and `𝒱 i j` covering `𝒰 i`, this is the open cover
+`𝒱 i j₁ ×[𝒰 i] 𝒱 i j₂` ranging over all `i`, `j₁`, `j₂`.
+-/
+noncomputable
+def diagonalCover : (pullback.diagonalObj f).OpenCover :=
+  (openCoverOfBase 𝒰 f f).bind
+    fun i ↦ openCoverOfLeftRight (𝒱 i) (𝒱 i) (𝒰.pullbackHom _ _) (𝒰.pullbackHom _ _)
+
+/-- The image of `𝒱 i j₁ ×[𝒰 i] 𝒱 i j₂` in `diagonalCover` with `j₁ = j₂` -/
+noncomputable
+def diagonalCoverDiagonalRange : (pullback.diagonalObj f).Opens :=
+  ⨆ i : Σ i, (𝒱 i).J, ((diagonalCover f 𝒰 𝒱).map ⟨i.1, i.2, i.2⟩).opensRange
+
+lemma diagonalCover_map (I) : (diagonalCover f 𝒰 𝒱).map I =
+    pullback.map _ _ _ _
+    ((𝒱 I.fst).map _ ≫ pullback.fst _ _) ((𝒱 I.fst).map _ ≫ pullback.fst _ _) (𝒰.map _)
+    (by simp)
+    (by simp) := by
+  ext1 <;> simp [diagonalCover, Cover.pullbackHom]
+
+/-- The restriction of the diagonal `X ⟶ X ×ₛ X` to `𝒱 i j ×[𝒰 i] 𝒱 i j` is the diagonal
+`𝒱 i j ⟶ 𝒱 i j ×[𝒰 i] 𝒱 i j`. -/
+noncomputable
+def diagonalRestrictIsoDiagonal (i j) :
+    Arrow.mk (pullback.diagonal f ∣_ ((diagonalCover f 𝒰 𝒱).map ⟨i, j, j⟩).opensRange) ≅
+    Arrow.mk (pullback.diagonal ((𝒱 i).map j ≫ pullback.snd _ _)) := by
+  refine (morphismRestrictOpensRange _ _).trans ?_
+  refine Arrow.isoMk ?_ (Iso.refl _) ?_
+  · exact pullback.congrHom rfl (diagonalCover_map _ _ _ _) ≪≫
+      pullbackDiagonalMapIso _ _ _ _ ≪≫ (asIso (pullback.diagonal _)).symm
+  have H : pullback.snd (pullback.diagonal f) ((diagonalCover f 𝒰 𝒱).map ⟨i, (j, j)⟩) ≫
+      pullback.snd _ _ = pullback.snd _ _ ≫ pullback.fst _ _ := by
+    rw [← cancel_mono ((𝒱 i).map _)]
+    apply pullback.hom_ext
+    · trans pullback.snd (pullback.diagonal f) ((diagonalCover f 𝒰 𝒱).map ⟨i, (j, j)⟩) ≫
+        (diagonalCover f 𝒰 𝒱).map _ ≫ pullback.snd _ _
+      · simp [diagonalCover_map]
+      symm
+      trans pullback.snd (pullback.diagonal f) ((diagonalCover f 𝒰 𝒱).map ⟨i, (j, j)⟩) ≫
+        (diagonalCover f 𝒰 𝒱).map _ ≫ pullback.fst _ _
+      · simp [diagonalCover_map]
+      · rw [← pullback.condition_assoc, ← pullback.condition_assoc]
+        simp
+    · simp [pullback.condition, Cover.pullbackHom]
+  dsimp [Cover.pullbackHom] at H ⊢
+  apply pullback.hom_ext
+  · simp only [Category.assoc, pullback.diagonal_fst, Category.comp_id]
+    simp only [← Category.assoc, IsIso.comp_inv_eq]
+    apply pullback.hom_ext <;> simp [H]
+  · simp only [Category.assoc, pullback.diagonal_snd, Category.comp_id]
+    simp only [← Category.assoc, IsIso.comp_inv_eq]
+    apply pullback.hom_ext <;> simp [H]
 
 end Pullback
 
@@ -555,17 +618,18 @@ variable (R S T : Type u) [CommRing R] [CommRing S] [CommRing T] [Algebra R S] [
 
 open TensorProduct Algebra.TensorProduct CommRingCat RingHomClass
 
-/-- The isomorphism between the fiber product of two schemes `Spec S` and `Spec T`
-over a scheme `Spec R` and the `Spec` of the tensor product `S ⊗[R] T`.-/
+/-- The isomorphism between the fibred product of two schemes `Spec S` and `Spec T`
+over a scheme `Spec R` and the `Spec` of the tensor product `S ⊗[R] T`. -/
 noncomputable
 def pullbackSpecIso :
     pullback (Spec.map (CommRingCat.ofHom (algebraMap R S)))
-      (Spec.map (CommRingCat.ofHom (algebraMap R T))) ≅ Spec (.of <| S ⊗[R] T) :=
+      (Spec.map (CommRingCat.ofHom (algebraMap R T))) ≅ Spec(S ⊗[R] T) :=
   letI H := IsLimit.equivIsoLimit (PullbackCone.eta _)
     (PushoutCocone.isColimitEquivIsLimitOp _ (CommRingCat.pushoutCoconeIsColimit R S T))
   limit.isoLimitCone ⟨_, isLimitPullbackConeMapOfIsLimit Scheme.Spec _ H⟩
+
 /--
-The composition of the inverse of the isomorphism `pullbackSepcIso R S T` (from the pullback of
+The composition of the inverse of the isomorphism `pullbackSpecIso R S T` (from the pullback of
 `Spec S ⟶ Spec R` and `Spec T ⟶ Spec R` to `Spec (S ⊗[R] T)`) with the first projection is
 the morphism `Spec (S ⊗[R] T) ⟶ Spec S` obtained by applying `Spec.map` to the ring morphism
 `s ↦ s ⊗ₜ[R] 1`.
@@ -574,18 +638,21 @@ the morphism `Spec (S ⊗[R] T) ⟶ Spec S` obtained by applying `Spec.map` to t
 lemma pullbackSpecIso_inv_fst :
     (pullbackSpecIso R S T).inv ≫ pullback.fst _ _ = Spec.map (ofHom includeLeftRingHom) :=
   limit.isoLimitCone_inv_π _ _
+
 /--
-The composition of the inverse of the isomorphism `pullbackSepcIso R S T` (from the pullback of
+The composition of the inverse of the isomorphism `pullbackSpecIso R S T` (from the pullback of
 `Spec S ⟶ Spec R` and `Spec T ⟶ Spec R` to `Spec (S ⊗[R] T)`) with the second projection is
 the morphism `Spec (S ⊗[R] T) ⟶ Spec T` obtained by applying `Spec.map` to the ring morphism
 `t ↦ 1 ⊗ₜ[R] t`.
 -/
 @[reassoc (attr := simp)]
 lemma pullbackSpecIso_inv_snd :
-    (pullbackSpecIso R S T).inv ≫ pullback.snd _ _ = Spec.map (ofHom (toRingHom includeRight)) :=
+    (pullbackSpecIso R S T).inv ≫ pullback.snd _ _ =
+      Spec.map (ofHom (R := T) (S := S ⊗[R] T) (toRingHom includeRight)) :=
   limit.isoLimitCone_inv_π _ _
+
 /--
-The composition of the isomorphism `pullbackSepcIso R S T` (from the pullback of
+The composition of the isomorphism `pullbackSpecIso R S T` (from the pullback of
 `Spec S ⟶ Spec R` and `Spec T ⟶ Spec R` to `Spec (S ⊗[R] T)`) with the morphism
 `Spec (S ⊗[R] T) ⟶ Spec S` obtained by applying `Spec.map` to the ring morphism `s ↦ s ⊗ₜ[R] 1`
 is the first projection.
@@ -594,8 +661,9 @@ is the first projection.
 lemma pullbackSpecIso_hom_fst :
     (pullbackSpecIso R S T).hom ≫ Spec.map (ofHom includeLeftRingHom) = pullback.fst _ _ := by
   rw [← pullbackSpecIso_inv_fst, Iso.hom_inv_id_assoc]
+
 /--
-The composition of the isomorphism `pullbackSepcIso R S T` (from the pullback of
+The composition of the isomorphism `pullbackSpecIso R S T` (from the pullback of
 `Spec S ⟶ Spec R` and `Spec T ⟶ Spec R` to `Spec (S ⊗[R] T)`) with the morphism
 `Spec (S ⊗[R] T) ⟶ Spec T` obtained by applying `Spec.map` to the ring morphism `t ↦ 1 ⊗ₜ[R] t`
 is the second projection.
@@ -605,7 +673,34 @@ lemma pullbackSpecIso_hom_snd :
     (pullbackSpecIso R S T).hom ≫ Spec.map (ofHom (toRingHom includeRight)) = pullback.snd _ _ := by
   rw [← pullbackSpecIso_inv_snd, Iso.hom_inv_id_assoc]
 
+lemma isPullback_Spec_map_isPushout {A B C P : CommRingCat} (f : A ⟶ B) (g : A ⟶ C)
+    (inl : B ⟶ P) (inr : C ⟶ P) (h : IsPushout f g inl inr) :
+    IsPullback (Spec.map inl) (Spec.map inr) (Spec.map f) (Spec.map g) :=
+  IsPullback.map Scheme.Spec h.op.flip
+
+lemma isPullback_Spec_map_pushout {A B C : CommRingCat} (f : A ⟶ B) (g : A ⟶ C) :
+    IsPullback (Spec.map (pushout.inl f g))
+      (Spec.map (pushout.inr f g)) (Spec.map f) (Spec.map g) := by
+  apply isPullback_Spec_map_isPushout
+  exact IsPushout.of_hasPushout f g
+
+lemma diagonal_Spec_map :
+    pullback.diagonal (Spec.map (CommRingCat.ofHom (algebraMap R S))) =
+      Spec.map (CommRingCat.ofHom (Algebra.TensorProduct.lmul' R : S ⊗[R] S →ₐ[R] S).toRingHom) ≫
+        (pullbackSpecIso R S S).inv := by
+  ext1 <;> simp only [pullback.diagonal_fst, pullback.diagonal_snd, ← Spec.map_comp, ← Spec.map_id,
+    AlgHom.toRingHom_eq_coe, Category.assoc, pullbackSpecIso_inv_fst, pullbackSpecIso_inv_snd]
+  · congr 1; ext x; change x = Algebra.TensorProduct.lmul' R (S := S) (x ⊗ₜ[R] 1); simp
+  · congr 1; ext x; change x = Algebra.TensorProduct.lmul' R (S := S) (1 ⊗ₜ[R] x); simp
+
 end Spec
 
+section CartesianMonoidalCategory
+variable {S : Scheme}
+
+instance : CartesianMonoidalCategory (Over S) := Over.cartesianMonoidalCategory _
+instance : BraidedCategory (Over S) := .ofCartesianMonoidalCategory
+
+end CartesianMonoidalCategory
 
 end AlgebraicGeometry

@@ -81,7 +81,11 @@ variable {α β : Type*} [CommMonoid α] [TopologicalSpace α]
 lemma hasProd_conditional_iff [Preorder β] [LocallyFiniteOrder β] : HasProd f a (.conditional β) ↔
     Tendsto (fun p ↦ ∏ b ∈ Icc p.1 p.2, f b) (atBot ×ˢ atTop) (𝓝 a) := by rfl
 
-@[to_additive]
+
+attribute [to_additive foo] OrderBot.atBot_eq
+
+attribute [to_additive foo] Nat.add_comm
+@[to_additive, to_dual]
 lemma hasProd_conditional_bot_iff [PartialOrder β] [LocallyFiniteOrder β] [OrderBot β] :
     HasProd f a (.conditional β) ↔
     Tendsto (fun c ↦ ∏ b ∈ Icc ⊥ c, f b) atTop (𝓝 a) := by
@@ -158,5 +162,7 @@ theorem tendsto_of_tendsto_cesaro' {E : Type*} [NormedAddCommGroup E] [NormedSpa
   rw [funext (Finset.eq_sum_range_sub u), ← add_sub_cancel (u 0) l,
     tendsto_const_add_iff, ← hasSum_conditional_nat_iff]
   apply hasSum_of_tendsto_cesaro _ h_bound
-  simp_rw [sum_range_sub u, sum_sub_distrib, sum_const, card_range, smul_sub,
-    nsmul_eq_]
+  have := fun n ↦ inv_smul_smul₀ (α := ℝ) (β := E) (Nat.cast_ne_zero.mpr <| Nat.add_one_ne_zero n)
+  simp_rw +singlePass [sum_range_sub u, sum_sub_distrib, sum_const, card_range, smul_sub,
+    ← Nat.cast_smul_eq_nsmul ℝ, ← Filter.tendsto_add_atTop_iff_nat 1, this,
+    tendsto_sub_const_iff, (Filter.tendsto_add_atTop_iff_nat 2).mpr h]

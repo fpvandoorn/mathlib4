@@ -7,6 +7,8 @@ module
 
 public import Mathlib.Analysis.Asymptotics.Lemmas
 public import Mathlib.Analysis.RCLike.Basic
+import all Mathlib.Order.Filter.AtTopBot.Tendsto -- for to_additive
+
 
 /-!
 # Asymptotics of Cesaro sums
@@ -14,7 +16,6 @@ public import Mathlib.Analysis.RCLike.Basic
 -/
 
 public section
-
 
 open Filter Asymptotics Topology Finset
 
@@ -81,11 +82,10 @@ variable {α β : Type*} [CommMonoid α] [TopologicalSpace α]
 lemma hasProd_conditional_iff [Preorder β] [LocallyFiniteOrder β] : HasProd f a (.conditional β) ↔
     Tendsto (fun p ↦ ∏ b ∈ Icc p.1 p.2, f b) (atBot ×ˢ atTop) (𝓝 a) := by rfl
 
+-- attribute [to_dual] OrderBot.atBot_eq
 
-attribute [to_additive foo] OrderBot.atBot_eq
-
-attribute [to_additive foo] Nat.add_comm
-@[to_additive, to_dual]
+-- todo: dualize
+@[to_additive]
 lemma hasProd_conditional_bot_iff [PartialOrder β] [LocallyFiniteOrder β] [OrderBot β] :
     HasProd f a (.conditional β) ↔
     Tendsto (fun c ↦ ∏ b ∈ Icc ⊥ c, f b) atTop (𝓝 a) := by

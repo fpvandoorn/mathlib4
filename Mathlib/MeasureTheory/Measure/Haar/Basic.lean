@@ -62,9 +62,6 @@ the file `Mathlib/MeasureTheory/Measure/Haar/Unique.lean`.
 * https://en.wikipedia.org/wiki/Haar_measure
 -/
 
-@[expose] public section
-
-
 noncomputable section
 
 open Set Inv Function TopologicalSpace MeasurableSpace
@@ -513,7 +510,7 @@ variable [TopologicalSpace G] [IsTopologicalGroup G] [MeasurableSpace G] [BorelS
 @[to_additive
 /-- The Haar measure on the locally compact additive group `G`, scaled so that
 `addHaarMeasure K₀ K₀ = 1`. -/]
-noncomputable def haarMeasure (K₀ : PositiveCompacts G) : Measure G :=
+public noncomputable def haarMeasure (K₀ : PositiveCompacts G) : Measure G :=
   ((haarContent K₀).measure K₀)⁻¹ • (haarContent K₀).measure
 
 @[to_additive]
@@ -521,6 +518,8 @@ theorem haarMeasure_apply {K₀ : PositiveCompacts G} {s : Set G} (hs : Measurab
     haarMeasure K₀ s = (haarContent K₀).outerMeasure s / (haarContent K₀).measure K₀ := by
   change ((haarContent K₀).measure K₀)⁻¹ * (haarContent K₀).measure s = _
   simp only [hs, div_eq_mul_inv, mul_comm, Content.measure_apply]
+
+public section haarMeasure
 
 @[to_additive]
 instance isMulLeftInvariant_haarMeasure (K₀ : PositiveCompacts G) :
@@ -691,6 +690,8 @@ theorem regular_of_isMulLeftInvariant {μ : Measure G} [SigmaFinite μ] [IsMulLe
   rw [haarMeasure_unique μ ⟨⟨K, hK⟩, h2K⟩]; exact Regular.smul hμK
 
 end SecondCountable_SigmaFinite
+
+end haarMeasure
 
 end Group
 

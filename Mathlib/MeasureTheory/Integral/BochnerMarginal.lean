@@ -1,4 +1,4 @@
-import Mathlib.MeasureTheory.Constructions.Prod.Integral
+import Mathlib.MeasureTheory.Integral.Prod
 import Mathlib.MeasureTheory.Integral.Marginal
 
 /-!
@@ -20,25 +20,17 @@ theorem piCongrLeft_preimage_univ_pi (f : ι' → ι) (t : ∀ i, Set (α i)) :
 
 end Set
 
-open scoped Classical ENNReal
+open scoped ENNReal
 open Set Function Equiv Finset
 
 noncomputable section
 
 namespace MeasureTheory
 
-section
-variable {α E : Type*} [MeasurableSpace α] [NormedAddCommGroup E] [NormedSpace ℝ E]
-variable {μ : Measure α}
-
-lemma integral_of_isEmpty [IsEmpty α] (f : α → E) : ∫ x, f x ∂μ = 0 := by convert integral_zero α E
-
-end
-
 section Marginal
 
-variable {δ δ' : Type*} {π : δ → Type*} [∀ x, MeasurableSpace (π x)]
-variable {μ : ∀ i, Measure (π i)} [∀ i, SigmaFinite (μ i)] [DecidableEq δ]
+variable {δ δ' : Type*} {π : δ → Type*} [∀ x, MeasurableSpace (π x)] [DecidableEq δ]
+variable {μ : ∀ i, Measure (π i)}
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 variable {s t : Finset δ} {f g : (∀ i, π i) → E} {x y : ∀ i, π i} {i : δ}
 
@@ -48,13 +40,7 @@ protected theorem MeasurePreserving.integral_map_equiv [MeasurableSpace β] {ν 
     ∫ a, f a ∂ν = ∫ a, f (g a) ∂μ := by
   rw [← MeasureTheory.integral_map_equiv g f, hg.map_eq]
 
-variable {α β} [MeasurableSpace α] [NormedAddCommGroup β] [MeasurableSpace β] [BorelSpace β]
-  [MeasurableSpace δ] {μ : Measure α} in
-theorem Integrable.comp_measurePreserving {ν : Measure δ} {g : δ → β} {f : α → δ}
-    (hg : Integrable g ν) (hf : MeasurePreserving f μ ν) : Integrable (g ∘ f) μ :=
-  hf.integrable_comp hg.aestronglyMeasurable |>.mpr hg
-
--- note: Measurable.integral_prod_right inconsistent with Integral.integral_prod_right
+-- note: StronglyMeasurable.integral_prod_right inconsistent with Integrable.integral_prod_right
 
 -- inconsistent:
 -- #check Subsingleton.stronglyMeasurable
@@ -63,7 +49,6 @@ theorem Integrable.comp_measurePreserving {ν : Measure δ} {g : δ → β} {f :
 -- variable order inconsistent
 -- #check MeasureTheory.integral_map_equiv
 -- #check MeasureTheory.lintegral_map_equiv
-
 variable (μ f s x) in
 /-- Integrate `f(x₁,…,xₙ)` over all variables `xᵢ` where `i ∈ s`. Return a function in the
   remaining variables (it will be constant in the `xᵢ` for `i ∈ s`).
@@ -75,17 +60,6 @@ def marginal : E :=
 notation "∫⋯∫_" s ", " f " ∂" μ:70 => marginal μ s f
 
 notation "∫⋯∫_" s ", " f => marginal (fun _ ↦ volume) s f
-
-variable [CompleteSpace E]
-variable (μ) in
-@[simp] theorem marginal_empty (f : (∀ i, π i) → E) : ∫⋯∫_∅, f ∂μ = f := by
-  ext1 x
-  simp_rw [marginal, Measure.pi_of_empty fun i : (∅ : Finset δ) ↦ μ i]
-  apply integral_dirac'
-  convert Subsingleton.stronglyMeasurable' _
-  -- doesn't work?
-  -- convert Subsingleton.stronglyMeasurable' (α := ((∅ : Finset δ) → π i)) _
-  infer_instance
 
 variable (μ) in
 /-- The marginal distribution is independent of the variables in `s`. -/
@@ -101,34 +75,82 @@ theorem marginal_update_of_mem {i : δ} (hi : i ∈ s)
   apply marginal_congr
   intro j hj
   have : j ≠ i := by rintro rfl; exact hj hi
-  apply update_noteq this
+  apply update_of_ne this
 
-variable [MeasurableSpace E] [Fintype δ]
+theorem marginal_singleton (f : (∀ i, π i) → E) (i : δ) :
+    ∫⋯∫_{i}, f ∂μ = fun x ↦ ∫ xᵢ, f (Function.update x i xᵢ) ∂μ i := by
+  let α : Type _ := ({i} : Finset δ)
+  let e := (MeasurableEquiv.piUnique fun j : α ↦ π j).symm
+  ext1 x
+  calc (∫⋯∫_{i}, f ∂μ) x
+      = ∫ (y : π (default : α)), f (updateFinset x {i} (e y)) ∂μ (default : α) := by
+        simp_rw [marginal, measurePreserving_piUnique (fun j : ({i} : Finset δ) ↦ μ j) |>.symm _
+          |>.integral_map_equiv]
+        gcongr
+    _ = ∫ xᵢ, f (Function.update x i xᵢ) ∂μ i := by simp [update_eq_updateFinset]; rfl
+
+variable [Fintype δ] [∀ i, SigmaFinite (μ i)] in
+@[simp] theorem marginal_univ {f : (∀ i, π i) → E} :
+    ∫⋯∫_univ, f ∂μ = fun _ ↦ ∫ x, f x ∂Measure.pi μ := by
+  let e : { j // j ∈ Finset.univ } ≃ δ := Equiv.subtypeUnivEquiv mem_univ
+  ext1 x
+  simp_rw [marginal, measurePreserving_piCongrLeft μ e |>.integral_map_equiv, updateFinset_def]
+  simp
+  rfl
+
+variable [Fintype δ] [∀ i, SigmaFinite (μ i)] in
+theorem integral_eq_marginal_univ {f : (∀ i, π i) → E} (x : ∀ i, π i) :
+    ∫ x, f x ∂Measure.pi μ = (∫⋯∫_univ, f ∂μ) x := by simp
+
+section Complete
+variable [CompleteSpace E]
+
+variable (μ) in
+@[simp] theorem marginal_empty (f : (∀ i, π i) → E) : ∫⋯∫_∅, f ∂μ = f := by
+  ext1 x
+  simp_rw [marginal, Measure.pi_of_empty fun i : (∅ : Finset δ) ↦ μ i]
+  apply integral_dirac'
+  apply StronglyMeasurable.of_subsingleton_dom
+end Complete
+
+omit [NormedSpace ℝ E]
+variable [Fintype δ]
 
 variable (μ f) in
 /- A function `f` is integrable w.r.t. the variables in `s` -/
 def IntegrableWRT (s : Finset δ) : Prop :=
-  ∀ᵐ x ∂.pi μ, Integrable (fun y : ∀ i : s, π i ↦ f (updateFinset x s y)) (.pi fun i : s ↦ μ i)
+  ∀ᵐ x ∂Measure.pi μ, Integrable (fun y : ∀ i : s, π i ↦ f (updateFinset x s y))
+    (.pi fun i : s ↦ μ i)
 
-theorem Integrable.IntegrableWRT (hf : Integrable f (.pi μ)) : IntegrableWRT μ f s :=
+variable (μ f) in
+/- A function `f` is integrable w.r.t. any subset of the variables in `s` -/
+def FiberIntegrable (s : Finset δ) : Prop :=
+  ∀ t ⊆ s, IntegrableWRT μ f t
+
+theorem Integrable.integrableWRT (hf : Integrable f (.pi μ)) : IntegrableWRT μ f univ :=
   sorry
 
-theorem IntegrableWRT.mono (hf : IntegrableWRT μ f s) (ht : t ⊆ s) : IntegrableWRT μ f t :=
+theorem FiberIntegrable.integrableWRT (hf : FiberIntegrable μ f s) : IntegrableWRT μ f s :=
+  hf s subset_rfl
+
+theorem FiberIntegrable.mono (hf : FiberIntegrable μ f s) (ht : t ⊆ s) : FiberIntegrable μ f t :=
+  fun _u hu ↦ hf _ <| hu.trans ht
+
+variable [NormedSpace ℝ E]
+
+theorem FiberIntegrable.marginal (hf : FiberIntegrable μ f s) {t₁ t₂ : Finset δ}
+  (ht : Disjoint t₁ t₂) (ht₁ : t₁ ⊆ s) (ht₂ : t₂ ⊆ s) : FiberIntegrable μ (∫⋯∫_t₁, f ∂μ) t₂ :=
   sorry
 
-theorem IntegrableWRT.marginal (hf : IntegrableWRT μ f s) {t₁ t₂ : Finset δ}
-  (ht : Disjoint t₁ t₂) (ht₁ : t₁ ⊆ s) (ht₂ : t₂ ⊆ s) : IntegrableWRT μ (∫⋯∫_t₁, f ∂μ) t₂ :=
-  sorry
-
-theorem IntegrableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e) {s : Finset δ'}
-    {f : (∀ i, π (e i)) → E} (hf : IntegrableWRT (μ ∘' e) f s) :
+theorem IntegrableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e)
+    {s : Finset δ'} {f : (∀ i, π (e i)) → E} (hf : IntegrableWRT (μ ∘' e) f s) :
     IntegrableWRT μ (f ∘' (· ∘' e)) (s.image e) :=
   have h : Measurable ((· ∘' e) : (∀ i, π i) → _) :=
-    measurable_pi_iff.mpr <| λ i ↦ measurable_pi_apply (e i)
+    measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
   sorry
 
-theorem IntegrableWRT.comp_update (hf : IntegrableWRT μ f s) {i : δ} {y : π i} :
-    IntegrableWRT μ (f ∘ (update · i y)) s :=
+theorem FiberIntegrable.comp_update (hf : FiberIntegrable μ f s) {i : δ} (hi : i ∈ s) :
+    ∀ᵐ x ∂μ i, FiberIntegrable μ (f ∘ (update · i x)) s :=
   sorry
 
 
@@ -147,6 +169,13 @@ theorem IntegrableWRT.comp_update (hf : IntegrableWRT μ f s) {i : δ} {y : π i
 -- theorem Integrable.marginal (hf : Integrable f (.pi μ)) : Integrable (∫⋯∫_s, f ∂μ) (.pi μ) :=
 --   hf.comp_updateFinset.integral_prod_left
 
+@[gcongr]
+theorem marginal_mono {f g : (∀ i, π i) → ℝ} (hf : IntegrableWRT μ f s) (hg : IntegrableWRT μ g s)
+    (hfg : f ≤ g) : ∫⋯∫_s, f ∂μ ≤ᵐ[Measure.pi μ] ∫⋯∫_s, g ∂μ := by
+  filter_upwards [hf, hg] with x hfx hgx
+  exact integral_mono hfx hgx fun _ ↦ hfg _
+
+variable [∀ i, SigmaFinite (μ i)]
 theorem marginal_union (f : (∀ i, π i) → E) (hf : IntegrableWRT μ f (s ∪ t))
     (hst : Disjoint s t) : ∫⋯∫_s ∪ t, f ∂μ = ∫⋯∫_s, ∫⋯∫_t, f ∂μ ∂μ := by
   ext1 x
@@ -170,17 +199,6 @@ theorem marginal_union' (f : (∀ i, π i) → E) {s t : Finset δ} (hf : Integr
   rw [Finset.union_comm] at hf ⊢
   rw [marginal_union f hf hst.symm]
 
-theorem marginal_singleton (f : (∀ i, π i) → E) (i : δ) :
-    ∫⋯∫_{i}, f ∂μ = fun x ↦ ∫ xᵢ, f (Function.update x i xᵢ) ∂μ i := by
-  let α : Type _ := ({i} : Finset δ)
-  let e := (MeasurableEquiv.piUnique fun j : α ↦ π j).symm
-  ext1 x
-  calc (∫⋯∫_{i}, f ∂μ) x
-      = ∫ (y : π (default : α)), f (updateFinset x {i} (e y)) ∂μ (default : α) := by
-        simp_rw [marginal, measurePreserving_piUnique (fun j : ({i} : Finset δ) ↦ μ j) |>.symm _
-          |>.integral_map_equiv]
-    _ = ∫ xᵢ, f (Function.update x i xᵢ) ∂μ i := by simp [update_eq_updateFinset]; rfl
-
 /-- Peel off a single integral from a `marginal` integral at the beginning (compare with
 `marginal_insert'`, which peels off an integral at the end). -/
 theorem marginal_insert (f : (∀ i, π i) → E) {i : δ} (hf : IntegrableWRT μ f (insert i s))
@@ -195,7 +213,7 @@ theorem marginal_erase (f : (∀ i, π i) → E) {i : δ} (hf : IntegrableWRT μ
     (hi : i ∈ s) (x : ∀ i, π i) :
     (∫⋯∫_s, f ∂μ) x = ∫ xᵢ, (∫⋯∫_(erase s i), f ∂μ) (Function.update x i xᵢ) ∂μ i := by
   rw [← insert_erase hi] at hf ⊢
-  simpa using marginal_insert _ hf (not_mem_erase i s) x
+  simpa using marginal_insert _ hf (notMem_erase i s) x
 
 /-- Peel off a single integral from a `marginal` integral at the end (compare with
 `marginal_insert`, which peels off an integral at the beginning). -/
@@ -211,38 +229,24 @@ theorem marginal_erase' (f : (∀ i, π i) → E) {i : δ} (hf : IntegrableWRT �
     (hi : i ∈ s) :
     ∫⋯∫_s, f ∂μ = ∫⋯∫_(erase s i), (fun x ↦ ∫ xᵢ, f (Function.update x i xᵢ) ∂μ i) ∂μ := by
   rw [← insert_erase hi] at hf ⊢
-  simpa using marginal_insert' _ hf (not_mem_erase i s)
+  simpa using marginal_insert' _ hf (notMem_erase i s)
 
-open Filter
+variable [CompleteSpace E]
 
-@[gcongr]
-theorem marginal_mono {f g : (∀ i, π i) → ℝ} (hf : IntegrableWRT μ f s) (hg : IntegrableWRT μ g s)
-    (hfg : f ≤ g) : ∫⋯∫_s, f ∂μ ≤ ∫⋯∫_s, g ∂μ :=
-  fun x ↦ integral_mono (hf x) (hg x) fun _ ↦ hfg _
-
-variable [Fintype δ] in
-@[simp] theorem marginal_univ {f : (∀ i, π i) → E} :
-    ∫⋯∫_univ, f ∂μ = fun _ ↦ ∫ x, f x ∂Measure.pi μ := by
-  let e : { j // j ∈ Finset.univ } ≃ δ := Equiv.subtypeUnivEquiv mem_univ
-  ext1 x
-  simp_rw [marginal, measurePreserving_piCongrLeft μ e |>.integral_map_equiv, updateFinset_def]
-  simp
-  rfl
-
-variable [Fintype δ] in
-theorem integral_eq_marginal_univ {f : (∀ i, π i) → E} (x : ∀ i, π i) :
-    ∫ x, f x ∂Measure.pi μ = (∫⋯∫_univ, f ∂μ) x := by simp
-
-theorem marginal_image [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
-    {f : (∀ i, π (e i)) → E} (hf : IntegrableWRT (μ ∘' e) f s) (x : ∀ i, π i) :
+omit [Fintype δ] in
+variable [Finite δ] in
+theorem marginal_image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
+    {f : (∀ i, π (e i)) → E} (hf : FiberIntegrable (μ ∘' e) f s) (x : ∀ i, π i) :
       (∫⋯∫_s.image e, f ∘ (· ∘' e) ∂μ) x = (∫⋯∫_s, f ∂μ ∘' e) (x ∘' e) := by
   induction s using Finset.induction generalizing x
   case empty => simp
   case insert i s hi ih =>
+    obtain ⟨_⟩ := nonempty_fintype δ
     rw [image_insert, marginal_insert _ _ (he.mem_finset_image.not.mpr hi),
-      marginal_insert _ hf hi]
-    have h2f : IntegrableWRT (μ ∘' e) f s := hf.mono <| Finset.subset_insert i s
-    simp_rw [ih h2f, ← update_comp_eq_of_injective' x he, ← image_insert]
+      marginal_insert _ hf.integrableWRT hi]
+    · have h2f : FiberIntegrable (μ ∘' e) f s := hf.mono <| Finset.subset_insert i s
+      simp_rw [ih h2f, ← update_comp_eq_of_injective' x he]
+    simp_rw [← image_insert]
     exact hf.image he
 
 theorem marginal_update_of_not_mem {i : δ}
@@ -268,20 +272,19 @@ theorem marginal_le_of_subset {f g : (∀ i, π i) → ℝ} (hst : s ⊆ t)
     ∫⋯∫_t, f ∂μ ≤ ∫⋯∫_t, g ∂μ := by
   rw [← union_sdiff_of_subset hst] at hf hg ⊢
   rw [marginal_union' f hf disjoint_sdiff, marginal_union' g hg disjoint_sdiff]
-  exact marginal_mono
-    (hf.marginal disjoint_sdiff (subset_union_left _ _) (subset_union_right _ _))
-    (hg.marginal disjoint_sdiff (subset_union_left _ _) (subset_union_right _ _)) hfg
+  sorry
+  -- exact marginal_mono
+  --   (hf.marginal disjoint_sdiff subset_union_left subset_union_right)
+  --   (hg.marginal disjoint_sdiff subset_union_left subset_union_right) hfg
 
-variable [Fintype δ] in
-theorem integral_eq_of_marginal_eq [Fintype δ] (s : Finset δ) {f g : (∀ i, π i) → E}
+theorem integral_eq_of_marginal_eq [Finite δ] (s : Finset δ) {f g : (∀ i, π i) → E}
     (hf : IntegrableWRT μ f univ) (hg : IntegrableWRT μ g univ) (hfg : ∫⋯∫_s, f ∂μ = ∫⋯∫_s, g ∂μ) :
     ∫ x, f x ∂Measure.pi μ = ∫ x, g x ∂Measure.pi μ := by
   rcases isEmpty_or_nonempty (∀ i, π i) with h|⟨⟨x⟩⟩
-  · convert integral_zero_measure _
-    convert integral_zero_measure _ -- todo: prove `integral_of_isEmpty`
+  · rw [integral_of_isEmpty, integral_of_isEmpty]
   simp_rw [integral_eq_marginal_univ x, marginal_eq_of_subset (subset_univ s) hf hg hfg]
 
-theorem integral_le_of_marginal_le [Fintype δ] (s : Finset δ) {f g : (∀ i, π i) → ℝ}
+theorem integral_le_of_marginal_le [Finite δ] (s : Finset δ) {f g : (∀ i, π i) → ℝ}
     (hf : IntegrableWRT μ f univ) (hg : IntegrableWRT μ g univ) (hfg : ∫⋯∫_s, f ∂μ ≤ ∫⋯∫_s, g ∂μ) :
     ∫ x, f x ∂Measure.pi μ ≤ ∫ x, g x ∂Measure.pi μ := by
   rcases isEmpty_or_nonempty (∀ i, π i) with h|⟨⟨x⟩⟩

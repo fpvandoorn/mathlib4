@@ -129,6 +129,45 @@ theorem lmarginal_mono {f g : (∀ i, X i) → ℝ≥0∞} (hfg : f ≤ g) : ∫
 
 variable [∀ i, SigmaFinite (μ i)]
 
+lemma ae_aemeasurable_left_of_prod {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    {μ : Measure α} {ν : Measure β} [SFinite ν]
+    {f : α × β → ℝ≥0∞} (hf : AEMeasurable f (μ.prod ν)) :
+    ∀ᵐ x ∂μ, AEMeasurable (fun y ↦ f (x, y)) ν := by
+  obtain ⟨g, hg, hfg⟩ := hf
+  filter_upwards [MeasureTheory.Measure.ae_ae_eq_curry_of_prod hfg] with x hx
+  refine AEMeasurable.congr ?_ hx.symm
+  exact hg.fun_comp (measurable_const.prodMk measurable_id') |>.aemeasurable
+
+
+
+theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
+    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
+  let f' : ((∀ i : ((s ∪ t)ᶜ : Finset δ), X i) × (∀ i : (s ∪ t : Finset δ), X i)) → ℝ≥0∞ :=
+    f ∘' fun z i ↦ if h : i ∈ s ∪ t then z.2 ⟨i, h⟩ else z.1 ⟨i, Finset.mem_compl.mpr h⟩
+  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := sorry
+  have h' : ∀ᵐ (x : (i : ↥(s ∪ t)ᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
+    AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi fun x ↦ μ ↑x) :=
+    ae_aemeasurable_left_of_prod this
+  have h'' : ∀ᵐ (x : ∀ i, X i) ∂Measure.pi μ,
+    AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi fun x ↦ μ x.1) :=
+    sorry
+  filter_upwards [h''] with x hx
+  let e := MeasurableEquiv.piFinsetUnion X hst
+  calc (∫⋯∫⁻_s ∪ t, f ∂μ) x
+      = ∫⁻ (y : (i : ↥(s ∪ t)) → X i), f (updateFinset x (s ∪ t) y)
+          ∂.pi fun i' : ↥(s ∪ t) ↦ μ i' := rfl
+    _ = ∫⁻ (y : ((i : s) → X i) × ((j : t) → X j)), f (updateFinset x (s ∪ t) _)
+          ∂(Measure.pi fun i : s ↦ μ i).prod (.pi fun j : t ↦ μ j) := by
+        rw [measurePreserving_piFinsetUnion hst μ |>.lintegral_map_equiv]
+    _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
+          ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
+        apply lintegral_prod
+        refine AEMeasurable.comp_measurable ?_ <| measurable_updateFinset.comp e.measurable
+        sorry
+    _ = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
+        simp_rw [lmarginal, updateFinset_updateFinset hst]
+        rfl
+
 theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
   ext1 x
@@ -142,6 +181,7 @@ theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
           ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
         apply lintegral_prod
+        #check AEMeasurable.comp_aemeasurable
         apply Measurable.aemeasurable
         exact hf.comp <| measurable_updateFinset.comp e.measurable
     _ = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by

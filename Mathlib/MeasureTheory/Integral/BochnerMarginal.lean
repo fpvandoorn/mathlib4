@@ -127,6 +127,22 @@ variable (μ f) in
 def FiberIntegrable (s : Finset δ) : Prop :=
   ∀ t ⊆ s, IntegrableWRT μ f t
 
+-- theorem IntegrableWRT_def (hf : IntegrableWRT μ f s) (ht : t ⊆ s) : IntegrableWRT μ f t := by
+--   filter_upwards [hf] with x hx
+
+
+theorem IntegrableWRT.mono [∀ (i : δ), SigmaFinite (μ i)] (hf : IntegrableWRT μ f s) (ht : t ⊆ s) : IntegrableWRT μ f t := by
+  filter_upwards [hf] with x hx
+  constructor
+  · sorry
+  · simp_rw [Integrable, HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))] at hx
+    rw [← Finset.union_sdiff_of_subset ht, lmarginal_union'] at hx
+    swap
+    fun_prop
+    simp_rw [HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))]
+
+
+
 theorem Integrable.integrableWRT (hf : Integrable f (.pi μ)) : IntegrableWRT μ f univ :=
   sorry
 

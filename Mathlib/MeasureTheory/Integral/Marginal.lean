@@ -129,6 +129,7 @@ theorem lmarginal_mono {f g : (∀ i, X i) → ℝ≥0∞} (hfg : f ≤ g) : ∫
 
 variable [∀ i, SigmaFinite (μ i)]
 
+-- move
 lemma ae_aemeasurable_left_of_prod {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     {μ : Measure α} {ν : Measure β} [SFinite ν]
     {f : α × β → ℝ≥0∞} (hf : AEMeasurable f (μ.prod ν)) :
@@ -138,17 +139,55 @@ lemma ae_aemeasurable_left_of_prod {α β : Type*} [MeasurableSpace α] [Measura
   refine AEMeasurable.congr ?_ hx.symm
   exact hg.fun_comp (measurable_const.prodMk measurable_id') |>.aemeasurable
 
+-- move
+variable {δ' : Type*} [DecidableEq δ'] in
+def _root_.Equiv.finsetCoeCongr {s t : Finset δ'} (h : s = t) :
+    s ≃ t where
+  toFun i := ⟨i, h ▸ i.2⟩
+  invFun i := ⟨i, h ▸ i.2⟩
+  left_inv i := by ext; rfl
+  right_inv i := by ext; rfl
 
+-- move
+variable {δ' : Type*} [DecidableEq δ'] in
+def _root_.Equiv.finsetUniv [Fintype δ'] :
+  Finset.univ (α := δ') ≃ δ' where
+  toFun i := i
+  invFun i := ⟨i, mem_univ _⟩
+  left_inv i := by ext; rfl
+  right_inv i := rfl
+
+-- move
+variable {α : Type*} [DecidableEq α] [Fintype α] in
+@[simp]
+theorem _root_.Finset.compl_union_self (s : Finset α) : sᶜ ∪ s = Finset.univ :=
+  compl_sup_eq_top
+
+-- move
+variable {δ' : Type*} (π : δ' → Type*) [(x : δ') → MeasurableSpace (π x)]
+  [DecidableEq δ'] in
+def _root_.MeasurableEquiv.piFinsetComplUnion [Fintype δ'] (s : Finset δ') :
+    ((∀ i : ↥sᶜ, π i) × ∀ i : s, π i) ≃ᵐ ∀ i, π i :=
+  MeasurableEquiv.piFinsetUnion π disjoint_compl_left |>.trans <| MeasurableEquiv.piCongrLeft π <|
+  Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
+    Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
+      ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
+    Measure.pi μ :=
+  sorry
 
 theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
   let f' : ((∀ i : ((s ∪ t)ᶜ : Finset δ), X i) × (∀ i : (s ∪ t : Finset δ), X i)) → ℝ≥0∞ :=
-    f ∘' fun z i ↦ if h : i ∈ s ∪ t then z.2 ⟨i, h⟩ else z.1 ⟨i, Finset.mem_compl.mpr h⟩
-  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := sorry
+    f ∘' MeasurableEquiv.piFinsetComplUnion X (s ∪ t)
+  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
+    rw [← map_piFinsetComplUnion] at hf
+    exact AEMeasurable.comp_measurable hf (MeasurableEquiv.measurable _)
   have h' : ∀ᵐ (x : (i : ↥(s ∪ t)ᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
     AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi fun x ↦ μ ↑x) :=
     ae_aemeasurable_left_of_prod this
-  have h'' : ∀ᵐ (x : ∀ i, X i) ∂Measure.pi μ,
+  have h'' : ∀ᵐ x ∂Measure.pi μ,
     AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi fun x ↦ μ x.1) :=
     sorry
   filter_upwards [h''] with x hx

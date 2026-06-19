@@ -178,7 +178,6 @@ lemma map_piFinsetUnion {s t : Finset δ} (h : Disjoint s t) :
       ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) = Measure.pi (μ ·.1) :=
   sorry
 
--- todo: cleanup
 lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
     Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
       ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
@@ -187,18 +186,17 @@ lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
   set e := MeasurableEquiv.piFinsetUnion X disjoint_compl_left
   set e' := MeasurableEquiv.piCongrLeft X <|
     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
-  change Measure.map (e' ∘ e) _ = _ -- ugly
-  rw [← MeasureTheory.Measure.map_map (MeasurableEquiv.measurable _)
-    (by apply MeasurableEquiv.measurable)] -- somewhat ugly
-  simp_rw [e]
-  erw [map_piFinsetUnion μ  disjoint_compl_left] --ugly
+  change Measure.map (e' ∘ e) _ = _ -- very hard to do with rw because of defeq issues
+  rw [← MeasureTheory.Measure.map_map e'.measurable e.measurable]
+  dsimp +instances only [Equiv.trans_apply, finsetUniv_apply, finsetCoeCongr_apply_coe]
+  rw [map_piFinsetUnion μ disjoint_compl_left]
   apply MeasureTheory.Measure.pi_map_piCongrLeft
 
 
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
-    {x : (i : δ) → X i} (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y))
-    (Measure.pi fun x ↦ μ ↑x))
+    {x : (i : δ) → X i}
+    (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi fun x ↦ μ ↑x))
     (hst : Disjoint s t) : (∫⋯∫⁻_s ∪ t, f ∂μ) x = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
   let e := MeasurableEquiv.piFinsetUnion X hst
   calc (∫⋯∫⁻_s ∪ t, f ∂μ) x

@@ -141,6 +141,7 @@ lemma ae_aemeasurable_left_of_prod {α β : Type*} [MeasurableSpace α] [Measura
 
 -- move
 variable {δ' : Type*} [DecidableEq δ'] in
+@[simps]
 def _root_.Equiv.finsetCoeCongr {s t : Finset δ'} (h : s = t) :
     s ≃ t where
   toFun i := ⟨i, h ▸ i.2⟩
@@ -150,6 +151,7 @@ def _root_.Equiv.finsetCoeCongr {s t : Finset δ'} (h : s = t) :
 
 -- move
 variable {δ' : Type*} [DecidableEq δ'] in
+@[simps]
 def _root_.Equiv.finsetUniv [Fintype δ'] :
   Finset.univ (α := δ') ≃ δ' where
   toFun i := i
@@ -176,11 +178,23 @@ lemma map_piFinsetUnion {s t : Finset δ} (h : Disjoint s t) :
       ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) = Measure.pi (μ ·.1) :=
   sorry
 
+-- todo: cleanup
 lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
     Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
       ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
-    Measure.pi μ :=
-  sorry
+    Measure.pi μ := by
+  rw [MeasurableEquiv.piFinsetComplUnion, funext (MeasurableEquiv.trans_apply _ _)]
+  set e := MeasurableEquiv.piFinsetUnion X disjoint_compl_left
+  set e' := MeasurableEquiv.piCongrLeft X <|
+    Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+  change Measure.map (e' ∘ e) _ = _ -- ugly
+  rw [← MeasureTheory.Measure.map_map (MeasurableEquiv.measurable _)
+    (by apply MeasurableEquiv.measurable)] -- somewhat ugly
+  simp_rw [e]
+  erw [map_piFinsetUnion μ  disjoint_compl_left] --ugly
+  apply MeasureTheory.Measure.pi_map_piCongrLeft
+
+
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i} (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y))

@@ -173,26 +173,30 @@ def _root_.MeasurableEquiv.piFinsetComplUnion [Fintype δ'] (s : Finset δ') :
   MeasurableEquiv.piFinsetUnion π disjoint_compl_left |>.trans <| MeasurableEquiv.piCongrLeft π <|
   Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
 
-lemma map_piFinsetUnion {s t : Finset δ} (h : Disjoint s t) :
-    Measure.map (MeasurableEquiv.piFinsetUnion X h)
-      ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) = Measure.pi (μ ·.1) :=
-  sorry
-
-lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
-    Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
-      ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
-    Measure.pi μ := by
-  rw [MeasurableEquiv.piFinsetComplUnion, funext (MeasurableEquiv.trans_apply _ _)]
-  set e := MeasurableEquiv.piFinsetUnion X disjoint_compl_left
-  set e' := MeasurableEquiv.piCongrLeft X <|
+-- move
+-- Easier than showing equality of measures directly
+-- `measurePreserving_piFinsetUnion` already exists
+theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
+    MeasurePreserving (MeasurableEquiv.piFinsetComplUnion X s)
+      ((Measure.pi fun i ↦ μ i.1).prod (Measure.pi fun i ↦ μ i))
+      (Measure.pi fun i ↦ μ i) :=
+  measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
+    measurePreserving_piCongrLeft μ <|
     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
-  change Measure.map (e' ∘ e) _ = _ -- very hard to do with rw because of defeq issues
-  rw [← MeasureTheory.Measure.map_map e'.measurable e.measurable]
-  dsimp +instances only [Equiv.trans_apply, finsetUniv_apply, finsetCoeCongr_apply_coe]
-  rw [map_piFinsetUnion μ disjoint_compl_left]
-  apply MeasureTheory.Measure.pi_map_piCongrLeft
 
+-- -- remove redundant?
+-- lemma map_piFinsetUnion {s t : Finset δ} (h : Disjoint s t) :
+--     Measure.map (MeasurableEquiv.piFinsetUnion X h)
+--       ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) = Measure.pi (μ ·.1) :=
+--   -- measurePreserving_piFinsetUnion .. |>.map_eq
+-- -- I guess `exact?` couldn't find this because it doesn't search structure fields?
 
+-- -- remove redundant?
+-- lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
+--     Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
+--       ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
+--     Measure.pi μ :=
+--   measurePreserving_piFinsetComplUnion .. |>.map_eq
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i}
@@ -208,7 +212,7 @@ theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
           ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
         apply lintegral_prod
-        rw [← map_piFinsetUnion μ hst] at hx
+        rw [← measurePreserving_piFinsetUnion hst μ |>.map_eq] at hx
         exact hx.comp_measurable (g := f ∘ updateFinset x _) e.measurable
     _ = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
         simp_rw [lmarginal, updateFinset_updateFinset hst]
@@ -219,7 +223,7 @@ theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : 
   let f' : ((∀ i : ((s ∪ t)ᶜ : Finset δ), X i) × (∀ i : (s ∪ t : Finset δ), X i)) → ℝ≥0∞ :=
     f ∘' MeasurableEquiv.piFinsetComplUnion X (s ∪ t)
   have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
-    rw [← map_piFinsetComplUnion] at hf
+    rw [← measurePreserving_piFinsetComplUnion .. |>.map_eq] at hf
     exact AEMeasurable.comp_measurable hf (MeasurableEquiv.measurable _)
   have h' : ∀ᵐ (x : (i : ↥(s ∪ t)ᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
     AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=

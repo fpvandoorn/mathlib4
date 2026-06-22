@@ -166,12 +166,32 @@ theorem _root_.Finset.compl_union_self (s : Finset α) : sᶜ ∪ s = Finset.uni
   compl_sup_eq_top
 
 -- move
-variable {δ' : Type*} (π : δ' → Type*) [(x : δ') → MeasurableSpace (π x)]
+variable {δ' : Type*} (π : δ' → Type*) [(i : δ') → MeasurableSpace (π i)]
   [DecidableEq δ'] in
 def _root_.MeasurableEquiv.piFinsetComplUnion [Fintype δ'] (s : Finset δ') :
     ((∀ i : ↥sᶜ, π i) × ∀ i : s, π i) ≃ᵐ ∀ i, π i :=
   MeasurableEquiv.piFinsetUnion π disjoint_compl_left |>.trans <| MeasurableEquiv.piCongrLeft π <|
   Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+-- Ok if we add these too?
+variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
+def _root_.Equiv.piFinsetComplUnion [Fintype ι] (s : Finset ι) :
+    ((∀ i : ↥sᶜ, α i) × ∀ i : s, α i) ≃ ∀ i, α i :=
+  Equiv.piFinsetUnion α disjoint_compl_left |>.trans <| Equiv.piCongrLeft α <|
+  Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
+theorem _root_.Equiv.piFinsetComplUnion_left [Fintype ι] (s : Finset ι)
+    {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∉ s) :
+    piFinsetComplUnion α s ⟨f, g⟩ i = f ⟨i, Finset.mem_compl.mpr hi⟩ :=
+  Equiv.piFinsetUnion_left α disjoint_compl_left (Finset.mem_compl.mpr hi)
+    (Finset.mem_union_left s <| Finset.mem_compl.mpr hi)
+
+variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
+theorem _root_.Equiv.piFinsetComplUnion_right [Fintype ι] (s : Finset ι)
+    {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∈ s) :
+    piFinsetComplUnion α s ⟨f, g⟩ i = g ⟨i, hi⟩ :=
+  Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
 
 -- move
 -- Easier than showing equality of measures directly
@@ -229,10 +249,22 @@ theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : 
     AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=
     ae_aemeasurable_left_of_prod this
   have h'' : ∀ᵐ x ∂Measure.pi μ,
-    AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi (μ ·.1)) :=
-    sorry
+      AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi (μ ·.1)) := by
+    let e := MeasurableEquiv.piFinsetComplUnion X (s ∪ t)
+    rw [← measurePreserving_piFinsetComplUnion μ _ |>.map_eq, e.measurableEmbedding.ae_map_iff]
+    filter_upwards [Measure.quasiMeasurePreserving_fst.ae h'] with x hx
+    convert hx with y
+    funext i
+    by_cases hi : i ∈ s ∪ t
+    · simpa [updateFinset, hi] using piFinsetComplUnion_right (f := x.1) (g := y) X _ hi |>.symm
+    · simp only [updateFinset, hi, e]
+      -- this is ugly, what is a better way?
+      change (piFinsetComplUnion X (s ∪ t)) _ _ = (piFinsetComplUnion X (s ∪ t)) _ _
+      rw [piFinsetComplUnion_left, piFinsetComplUnion_left] <;> exact hi
   filter_upwards [h''] with x hx
   exact lmarginal_union_ae_apply μ f hx hst
+
+-- ToDo: add variant where s ∪ t is univ
 
 theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by

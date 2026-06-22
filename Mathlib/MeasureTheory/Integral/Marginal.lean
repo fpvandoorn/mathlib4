@@ -98,6 +98,35 @@ theorem _root_.Measurable.lmarginal [∀ i, SigmaFinite (μ i)] (hf : Measurable
   apply lintegral_dirac'
   exact Subsingleton.measurable
 
+/-- A generalization of `lmarginal_congr` that also proves that the marginal doesn't depend on
+  a variable if the function `f` doesn't. -/
+theorem lmarginal_congr' [Fintype δ] {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
+    (h : ∀ i ∉ s, x i ≠ y i → ∀ z₁ z₂ : ∀ i, X i, (∀ j ≠ i, z₁ j = z₂ j) → f z₁ = f z₂) :
+    (∫⋯∫⁻_s, f ∂μ) x = (∫⋯∫⁻_s, f ∂μ) y := by
+  classical
+  dsimp [lmarginal, updateFinset_def]
+  congr with u
+  generalize ht : {i ∉ s | x i ≠ y i} = t
+  induction t using Finset.induction generalizing y with
+  | empty =>
+    simp only [ne_eq, filter_eq_empty_iff, Finset.mem_compl, Decidable.not_not] at ht
+    rcongr; exact ht ‹_›
+  | insert i t h ih =>
+    have hi : i ∉ s :=
+      Finset.mem_compl.mp <| mem_of_mem_filter _ <| ht ▸ Finset.mem_insert_self i t
+    let z := Function.update y i (x i)
+    have := ih (y := z) ?_ ?_
+    rw [this]
+    apply h
+
+
+  congr with i
+  congr with hi
+  obtain h|h := h i hi
+  · exact h
+  ·
+
+
 /-- The marginal distribution is independent of the variables in `s`. -/
 theorem lmarginal_congr {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
     (h : ∀ i ∉ s, x i = y i) :
@@ -194,8 +223,6 @@ theorem _root_.Equiv.piFinsetComplUnion_right [Fintype ι] (s : Finset ι)
   Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
 
 -- move
--- Easier than showing equality of measures directly
--- `measurePreserving_piFinsetUnion` already exists
 theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
     MeasurePreserving (MeasurableEquiv.piFinsetComplUnion X s)
       ((Measure.pi fun i ↦ μ i.1).prod (Measure.pi fun i ↦ μ i))
@@ -203,20 +230,6 @@ theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
   measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
     measurePreserving_piCongrLeft μ <|
     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
-
--- -- remove redundant?
--- lemma map_piFinsetUnion {s t : Finset δ} (h : Disjoint s t) :
---     Measure.map (MeasurableEquiv.piFinsetUnion X h)
---       ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) = Measure.pi (μ ·.1) :=
---   -- measurePreserving_piFinsetUnion .. |>.map_eq
--- -- I guess `exact?` couldn't find this because it doesn't search structure fields?
-
--- -- remove redundant?
--- lemma map_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
---     Measure.map (MeasurableEquiv.piFinsetComplUnion X s)
---       ((Measure.pi fun x : ↥sᶜ ↦ μ x).prod (Measure.pi fun x : s ↦ μ ↑x)) =
---     Measure.pi μ :=
---   measurePreserving_piFinsetComplUnion .. |>.map_eq
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i}
@@ -317,6 +330,20 @@ theorem lmarginal_erase' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {
 
 theorem lintegral_eq_lmarginal_univ [Fintype δ] {f : (∀ i, X i) → ℝ≥0∞} (x : ∀ i, X i) :
     ∫⁻ x, f x ∂Measure.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
+
+-- move
+instance [Fintype δ] [∀ i, NeZero (μ i)] : NeZero (Measure.pi μ) := by
+  rw [neZero_iff, ← Measure.measure_univ_ne_zero, Measure.pi_univ, Finset.prod_ne_zero_iff]
+  simp [NeZero.ne]
+
+theorem lmarginal_lmarginal_compl [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
+    (hf : AEMeasurable f (.pi μ)) :
+    (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+  obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
+  rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
+  rw [Finset.union_compl, ← lintegral_eq_lmarginal_univ] at hy
+  apply lmarginal_congr
+
 
 theorem lmarginal_image [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
     {f : (∀ i, X (e i)) → ℝ≥0∞} (hf : Measurable f) (x : ∀ i, X i) :

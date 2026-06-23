@@ -384,9 +384,8 @@ theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
 
 theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
-  -- filter_upwards [hf.comp_updateFinset] with x hx
-  -- exact lmarginal_union_ae_apply μ f hx hst
-  sorry
+  filter_upwards [hf.comp_updateFinset (s ∪ t)] with x hx
+  exact lmarginal_union_ae_apply μ f hx hst
 
 theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by

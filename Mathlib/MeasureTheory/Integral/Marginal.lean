@@ -67,6 +67,8 @@ noncomputable section
 
 namespace MeasureTheory
 
+open Measure
+
 section LMarginal
 
 variable {δ δ' : Type*} {X : δ → Type*} [∀ i, MeasurableSpace (X i)]
@@ -152,128 +154,213 @@ lemma _root_.AEMeasurable.prodMk_left {α β : Type*} [MeasurableSpace α] [Meas
   refine AEMeasurable.congr ?_ hx.symm
   exact hg.fun_comp (measurable_const.prodMk measurable_id') |>.aemeasurable
 
--- move
-variable {δ' : Type*} [DecidableEq δ'] in
+-- -- move
+-- variable {δ' : Type*} [DecidableEq δ'] in
+-- @[simps]
+-- def _root_.Equiv.finsetCoeCongr {s t : Finset δ'} (h : s = t) :
+--     s ≃ t where
+--   toFun i := ⟨i, h ▸ i.2⟩
+--   invFun i := ⟨i, h ▸ i.2⟩
+--   left_inv i := by ext; rfl
+--   right_inv i := by ext; rfl
+
+-- -- move
+-- variable {δ' : Type*} [DecidableEq δ'] in
+-- @[simps]
+-- def _root_.Equiv.finsetUniv [Fintype δ'] :
+--   Finset.univ (α := δ') ≃ δ' where
+--   toFun i := i
+--   invFun i := ⟨i, mem_univ _⟩
+--   left_inv i := by ext; rfl
+--   right_inv i := rfl
+
+-- -- move
+-- variable {α : Type*} [DecidableEq α] [Fintype α] in
+-- @[simp]
+-- theorem _root_.Finset.compl_union_self (s : Finset α) : sᶜ ∪ s = Finset.univ :=
+--   compl_sup_eq_top
+
+-- -- move
+-- variable {δ' : Type*} (π : δ' → Type*) [(i : δ') → MeasurableSpace (π i)]
+--   [DecidableEq δ'] in
+-- def _root_.MeasurableEquiv.piFinsetComplUnion [Fintype δ'] (s : Finset δ') :
+--     ((∀ i : ↥sᶜ, π i) × ∀ i : s, π i) ≃ᵐ ∀ i, π i :=
+--   MeasurableEquiv.piFinsetUnion π disjoint_compl_left |>.trans <| MeasurableEquiv.piCongrLeft π <|
+--   Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+-- -- Ok if we add these too?
+-- variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
+-- def _root_.Equiv.piFinsetComplUnion [Fintype ι] (s : Finset ι) :
+--     ((∀ i : ↥sᶜ, α i) × ∀ i : s, α i) ≃ ∀ i, α i :=
+--   Equiv.piFinsetUnion α disjoint_compl_left |>.trans <| Equiv.piCongrLeft α <|
+--   Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+-- variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
+-- theorem _root_.Equiv.piFinsetComplUnion_eq_of_notMem [Fintype ι] {s : Finset ι}
+--     {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∉ s) :
+--     piFinsetComplUnion α s ⟨f, g⟩ i = f ⟨i, Finset.mem_compl.mpr hi⟩ :=
+--   Equiv.piFinsetUnion_left α disjoint_compl_left (Finset.mem_compl.mpr hi)
+--     (Finset.mem_union_left s <| Finset.mem_compl.mpr hi)
+
+-- variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
+-- theorem _root_.Equiv.piFinsetComplUnion_eq_of_mem [Fintype ι] {s : Finset ι}
+--     {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∈ s) :
+--     piFinsetComplUnion α s ⟨f, g⟩ i = g ⟨i, hi⟩ :=
+--   Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
+
+-- -- move
+-- theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
+--     MeasurePreserving (MeasurableEquiv.piFinsetComplUnion X s)
+--       ((Measure.pi fun i ↦ μ i.1).prod (Measure.pi fun i ↦ μ i))
+--       (Measure.pi fun i ↦ μ i) :=
+--   measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
+--     measurePreserving_piCongrLeft μ <|
+--     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+-- variable {δ' : Type*} {π : δ' → Type*} [(i : δ') → MeasurableSpace (π i)] [DecidableEq δ'] in
+-- lemma MeasurableEquiv.piFinsetComplUnion_apply [Fintype δ'] {s : Finset δ'}
+--     (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i)) :
+--     MeasurableEquiv.piFinsetComplUnion π s x =
+--     Equiv.piFinsetComplUnion π s x := rfl
+
+-- variable {δ' : Type*} {π : δ' → Type*} [DecidableEq δ'] in
+-- lemma Equiv.updateFinset_piFinsetComplUnion [Fintype δ'] {s : Finset δ'}
+--     (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i))
+--     (y : (i : ↥s) → π i) :
+--     updateFinset (Equiv.piFinsetComplUnion π s x) s y =
+--     Equiv.piFinsetComplUnion π s (x.1, y) := by
+--   ext i
+--   by_cases hi : i ∈ s
+--   · simpa [updateFinset, hi] using piFinsetComplUnion_eq_of_mem (f := x.1) (g := y) hi |>.symm
+--   · simp only [updateFinset, hi, ↓reduceDIte, piFinsetComplUnion_eq_of_notMem hi]
+
+variable {δ' : Type*} (π : δ' → Type*) [DecidableEq δ'] in
+lemma _root_.Function.involutive_updateFinset (s : Finset δ') :
+    Involutive fun z : (∀ i, π i) × ∀ i : s, π i ↦ (updateFinset z.1 s z.2, (z.1 ·)) := by
+  intro z
+  ext i <;> simp +contextual [updateFinset]
+
+variable {δ' : Type*} (π : δ' → Type*) [DecidableEq δ'] in
+/-- The equivalence that sends `(x, y, z)` to `(z, y, x)`, where `(x, y) : ∀ i, π i` with `x` the
+components in `s` and `y` the components not in `s`. -/
 @[simps]
-def _root_.Equiv.finsetCoeCongr {s t : Finset δ'} (h : s = t) :
-    s ≃ t where
-  toFun i := ⟨i, h ▸ i.2⟩
-  invFun i := ⟨i, h ▸ i.2⟩
-  left_inv i := by ext; rfl
-  right_inv i := by ext; rfl
+def _root_.Equiv.piFinsetSwap (s : Finset δ') :
+    ((∀ i, π i) × ∀ i : s, π i) ≃ (∀ i, π i) × ∀ i : s, π i where
+      toFun z := (updateFinset z.1 s z.2, (z.1 ·))
+      invFun z := (updateFinset z.1 s z.2, (z.1 ·))
+      left_inv := involutive_updateFinset π s
+      right_inv := involutive_updateFinset π s
 
--- move
-variable {δ' : Type*} [DecidableEq δ'] in
-@[simps]
-def _root_.Equiv.finsetUniv [Fintype δ'] :
-  Finset.univ (α := δ') ≃ δ' where
-  toFun i := i
-  invFun i := ⟨i, mem_univ _⟩
-  left_inv i := by ext; rfl
-  right_inv i := rfl
-
--- move
-variable {α : Type*} [DecidableEq α] [Fintype α] in
-@[simp]
-theorem _root_.Finset.compl_union_self (s : Finset α) : sᶜ ∪ s = Finset.univ :=
-  compl_sup_eq_top
-
--- move
 variable {δ' : Type*} (π : δ' → Type*) [(i : δ') → MeasurableSpace (π i)]
   [DecidableEq δ'] in
-def _root_.MeasurableEquiv.piFinsetComplUnion [Fintype δ'] (s : Finset δ') :
-    ((∀ i : ↥sᶜ, π i) × ∀ i : s, π i) ≃ᵐ ∀ i, π i :=
-  MeasurableEquiv.piFinsetUnion π disjoint_compl_left |>.trans <| MeasurableEquiv.piCongrLeft π <|
-  Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+/-- The measurable equivalence that sends `(x, y, z)` to `(z, y, x)`, where `(x, y) : ∀ i, π i`
+with `x` the components in `s` and `y` the components not in `s`. -/
+def _root_.MeasurableEquiv.piFinsetSwap (s : Finset δ') :
+    ((∀ i, π i) × ∀ i : s, π i) ≃ᵐ (∀ i, π i) × ∀ i : s, π i where
+  toEquiv := Equiv.piFinsetSwap π s
+  measurable_toFun := measurable_updateFinset'.prod <|
+    measurable_pi_lambda _ fun i ↦ (measurable_pi_apply (i : δ')).comp measurable_fst
+  measurable_invFun := measurable_updateFinset'.prod <|
+    measurable_pi_lambda _ fun i ↦ (measurable_pi_apply (i : δ')).comp measurable_fst
 
--- Ok if we add these too?
-variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
-def _root_.Equiv.piFinsetComplUnion [Fintype ι] (s : Finset ι) :
-    ((∀ i : ↥sᶜ, α i) × ∀ i : s, α i) ≃ ∀ i, α i :=
-  Equiv.piFinsetUnion α disjoint_compl_left |>.trans <| Equiv.piCongrLeft α <|
-  Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+variable {δ' : Type*} (π : δ' → Type*) [(i : δ') → MeasurableSpace (π i)]
+  [DecidableEq δ'] in
+lemma MeasurableEquiv.piFinsetSwap_apply {s : Finset δ'} (x : (∀ i, π i) × ∀ i : s, π i) :
+    MeasurableEquiv.piFinsetSwap π s x = Equiv.piFinsetSwap π s x := rfl
 
-variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
-theorem _root_.Equiv.piFinsetComplUnion_eq_of_notMem [Fintype ι] {s : Finset ι}
-    {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∉ s) :
-    piFinsetComplUnion α s ⟨f, g⟩ i = f ⟨i, Finset.mem_compl.mpr hi⟩ :=
-  Equiv.piFinsetUnion_left α disjoint_compl_left (Finset.mem_compl.mpr hi)
-    (Finset.mem_union_left s <| Finset.mem_compl.mpr hi)
+variable {δ' : Type*} (π : δ' → Type*) [DecidableEq δ'] {s : Finset δ'} in
+theorem preimage_piFinsetSwap (u : ∀ i, Set (π i)) (v : ∀ i : s, Set (π i)) :
+    Equiv.piFinsetSwap π s ⁻¹' Set.univ.pi u ×ˢ Set.univ.pi v =
+    Set.univ.pi (updateFinset u s v) ×ˢ Set.univ.pi (fun i : s ↦ u i) := by
+  ext x
+  simp_rw [Set.mem_preimage, piFinsetSwap_apply]
+  grind [updateFinset]
 
-variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
-theorem _root_.Equiv.piFinsetComplUnion_eq_of_mem [Fintype ι] {s : Finset ι}
-    {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∈ s) :
-    piFinsetComplUnion α s ⟨f, g⟩ i = g ⟨i, hi⟩ :=
-  Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
+variable {ι : Type*} [DecidableEq ι] [Fintype ι]
+lemma filter_univ_mem (s : Finset ι) : ({i | i ∈ s} : Finset ι) = s := by simp
+
+variable {ι : Type*} [DecidableEq ι] [Fintype ι]
+@[simp]
+lemma filter_univ_notMem (s : Finset ι) : ({i | i ∉ s} : Finset ι) = sᶜ := by
+  simp [← Finset.mem_compl]
+
+variable {δ' M : Type*} (π : δ' → Type*) [DecidableEq δ'] [CommMonoid M] in
+/-- A product involving `updateFinset` can be split up -/
+theorem prod_updateFinset_eq [Fintype δ'] {s : Finset δ'}
+    (f : ∀ i, π i → M)
+    (x : ∀ i, π i) (y : ∀ i : s, π i) :
+    ∏ i, f i (updateFinset x s y i) =
+    (∏ i ∈ s.attach, f i (y i)) * ∏ i ∈ sᶜ, f i (x i) := by
+  simp_rw [updateFinset, apply_dite, prod_dite, univ_eq_attach,
+    prod_attach (f := fun i ↦ f i (x i))]
+  congr 1
+  · congr! <;> simp
+  · congr 1; simp
+
+variable {δ' M : Type*} {π π' : δ' → Type*} [DecidableEq δ'] [CommMonoid M] in
+/-- Two different ways to write `(∏ i, F i (f i) (x i)) * ∏ i, F i (g i) (y i)` using
+`updateFinset` are equal. -/
+theorem prod_updateFinset_mul_prod_eq [Fintype δ'] {s : Finset δ'}
+    (F : ∀ i, π i → π' i → M)
+    (f : ∀ i, π i) (g : ∀ i : s, π i)
+    (x : ∀ i, π' i) (y : ∀ i : s, π' i) :
+    (∏ i, F i (updateFinset f s g i) (x i)) * ∏ i ∈ s.attach, F i (f i) (y i) =
+    (∏ i, F i (f i) (updateFinset x s y i)) * ∏ i ∈ s.attach, F i (g i) (x i) := by
+  rw [prod_updateFinset_eq, prod_updateFinset_eq (f := fun (i : δ') (f : π i) ↦ F i f (x i))]
+  grind only
+
+theorem map_piFinsetSwap [Fintype δ] (ν : ∀ i : s, Measure (X i)) [∀ i, SigmaFinite (ν i)] :
+    Measure.map (MeasurableEquiv.piFinsetSwap X s) (.prod (.pi μ) (.pi ν)) =
+      .prod (.pi <| updateFinset μ s ν) (.pi (μ ·)) := by
+  have : ∀ i, SigmaFinite (updateFinset μ s ν i) := by grind [updateFinset]
+  apply Measure.prod_eq_generateFrom generateFrom_pi generateFrom_pi isPiSystem_pi isPiSystem_pi
+    ?_ ?_ ?_ |>.symm
+  · exact .pi (fun i ↦ (updateFinset μ s ν i).toFiniteSpanningSetsIn)
+  · exact .pi (fun i : s ↦ (μ i).toFiniteSpanningSetsIn)
+  simp_rw [Set.mem_image, Set.mem_pi, Set.mem_univ, mem_setOf_eq, forall_const,
+    forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, pi_pi]
+  intro u hu v hv
+  rw [map_apply (MeasurableEquiv.measurable _) (.prod (.univ_pi hu) (.univ_pi hv))]
+  conv_lhs => arg 2; arg 1; eta_expand
+  simp_rw [MeasurableEquiv.piFinsetSwap_apply, preimage_piFinsetSwap, prod_prod, pi_pi,
+    univ_eq_attach, prod_updateFinset_mul_prod_eq]
+
+variable {ι : Type*} (π : ι → Type*) [DecidableEq ι] in
+@[simp]
+lemma updateFinsetSelf (x : ∀ i, π i) (s : Finset ι) : updateFinset x s (x ·) = x := by
+  simp [updateFinset_def]
 
 -- move
-theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
-    MeasurePreserving (MeasurableEquiv.piFinsetComplUnion X s)
-      ((Measure.pi fun i ↦ μ i.1).prod (Measure.pi fun i ↦ μ i))
-      (Measure.pi fun i ↦ μ i) :=
-  measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
-    measurePreserving_piCongrLeft μ <|
-    Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+theorem measurePreserving_piFinsetSwap [Fintype δ] (s : Finset δ) :
+    MeasurePreserving (MeasurableEquiv.piFinsetSwap X s)
+      (.prod (.pi μ) (.pi (μ ·)))
+      (.prod (.pi μ) (.pi (μ ·))) :=
+  ⟨MeasurableEquiv.measurable _, by rw [map_piFinsetSwap, updateFinsetSelf]⟩
 
-variable {δ' : Type*} {π : δ' → Type*} [(i : δ') → MeasurableSpace (π i)] [DecidableEq δ'] in
-lemma MeasurableEquiv.piFinsetComplUnion_apply [Fintype δ'] {s : Finset δ'}
-    (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i)) :
-    MeasurableEquiv.piFinsetComplUnion π s x =
-    Equiv.piFinsetComplUnion π s x := rfl
-
-variable {δ' : Type*} {π : δ' → Type*} [DecidableEq δ'] in
-lemma Equiv.updateFinset_piFinsetComplUnion [Fintype δ'] {s : Finset δ'}
-    (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i))
-    (y : (i : ↥s) → π i) :
-    updateFinset (Equiv.piFinsetComplUnion π s x) s y =
-    Equiv.piFinsetComplUnion π s (x.1, y) := by
-  ext i
-  by_cases hi : i ∈ s
-  · simpa [updateFinset, hi] using piFinsetComplUnion_eq_of_mem (f := x.1) (g := y) hi |>.symm
-  · simp only [updateFinset, hi, ↓reduceDIte, piFinsetComplUnion_eq_of_notMem hi]
-
-lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
-    ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·)) := by
-  let f' : ((∀ i : (sᶜ : Finset δ), X i) × (∀ i : (s : Finset δ), X i)) → ℝ≥0∞ :=
-    f ∘' MeasurableEquiv.piFinsetComplUnion X s
-  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
-    rw [← measurePreserving_piFinsetComplUnion .. |>.map_eq] at hf
-    exact hf.comp_measurable (MeasurableEquiv.measurable _)
-  have h' : ∀ᵐ (x : (i : ↥sᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
-      AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=
-    AEMeasurable.prodMk_left this
-  let e := MeasurableEquiv.piFinsetComplUnion X s
-  rw [← measurePreserving_piFinsetComplUnion μ _ |>.map_eq, e.measurableEmbedding.ae_map_iff]
-  filter_upwards [Measure.quasiMeasurePreserving_fst.ae h'] with x hx
-  simp_rw [f', Function.dcomp, MeasurableEquiv.piFinsetComplUnion_apply] at hx
-  simp_rw [e, MeasurableEquiv.piFinsetComplUnion_apply, Equiv.updateFinset_piFinsetComplUnion, hx]
-
--- open MeasurableSpace in
--- lemma absolutelyContinuous_generateFrom_iff {α : Type*} {C : Set (Set α)}
---     {μ ν : Measure[generateFrom C] α} (h : ∀ s ∈ C, ν s = 0 → μ s = 0) : μ ≪ ν := by
---   apply Measure.AbsolutelyContinuous.mk fun s hs hνs ↦ ?_
---   induction hs with
---   | basic u hu => exact h u hu hνs
---   | empty => exact measure_empty
---   | compl t ht ih => sorry
---   | iUnion f hf ih => sorry
-
-
--- move / is this true?
+-- move?
 lemma quasiMeasurePreserving_updateFinset [Fintype δ] :
-  Measure.QuasiMeasurePreserving
+  QuasiMeasurePreserving
     (fun a : ((i : δ) → X i) × ((i : s) → X i) ↦ updateFinset a.1 s a.2)
     ((Measure.pi μ).prod (Measure.pi fun i ↦ μ i)) (Measure.pi μ) := by
-  refine ⟨measurable_updateFinset', ?_⟩
-  sorry
+  convert quasiMeasurePreserving_fst.comp
+    (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
+  rfl
+
+variable {μ} (s) in
+lemma _root_.AEMeasurable.comp_updateFinset' [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+    AEMeasurable (uncurry (f <| updateFinset · s ·))
+      (Measure.pi μ |>.prod <| Measure.pi (μ ·)) :=
+  hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
+
+variable {μ} (s) in
+lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+    ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·)) :=
+  (hf.comp_updateFinset' s).prodMk_left
 
 lemma _root_.AEMeasurable.marginal [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
     AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (Measure.pi (μ ·)) := by
   apply AEMeasurable.lintegral_prod_right
   exact hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
-
-
-
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i}
@@ -297,8 +384,9 @@ theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
 
 theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
-  filter_upwards [hf.comp_updateFinset] with x hx
-  exact lmarginal_union_ae_apply μ f hx hst
+  -- filter_upwards [hf.comp_updateFinset] with x hx
+  -- exact lmarginal_union_ae_apply μ f hx hst
+  sorry
 
 theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by

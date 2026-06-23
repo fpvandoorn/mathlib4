@@ -1,5 +1,6 @@
 import Mathlib.MeasureTheory.Integral.Prod
 import Mathlib.MeasureTheory.Integral.Marginal
+import Mathlib.Tactic.ClickSuggestions
 
 /-!
 # Marginals of Banach valued functions
@@ -10,13 +11,15 @@ This is a lot less nice
   a subset of the variables, that only holds almost everywhere.
 * This means that many equalities will also hold only almost everywhere.
 -/
+
+#click_suggestions
+
 section Set
 namespace Set
 variable {ι ι' : Type*} {α : ι → Type*}
 theorem piCongrLeft_preimage_univ_pi (f : ι' → ι) (t : ∀ i, Set (α i)) :
     (fun g : ∀ i, α i ↦ g ∘' f) ⁻¹' univ.pi (t  ∘' f) = (range f).pi t := by
   ext x; simp [Function.dcomp]
-
 
 end Set
 
@@ -117,29 +120,52 @@ omit [NormedSpace ℝ E]
 variable [Fintype δ]
 
 variable (μ f) in
-/- A function `f` is integrable w.r.t. the variables in `s` -/
+/- A function `f` is integrable w.r.t. the variables in `s`.
+We currently assume that `f` is measurable on the whole space, since lemmas about lmarginal require
+that. If needed, we could probably weaken this in the future. -/
 def IntegrableWRT (s : Finset δ) : Prop :=
-  ∀ᵐ x ∂Measure.pi μ, Integrable (fun y : ∀ i : s, π i ↦ f (updateFinset x s y))
+  AEStronglyMeasurable f (Measure.pi μ) ∧
+  ∀ᵐ x ∂Measure.pi μ, HasFiniteIntegral (fun y : ∀ i : s, π i ↦ f (updateFinset x s y))
     (.pi fun i : s ↦ μ i)
+
+-- move
+lemma AEStronglyMeasurable.comp_updateFinset [∀ (i : δ), SigmaFinite (μ i)]
+    (hf : AEStronglyMeasurable f (.pi μ)) :
+    ∀ᵐ x ∂Measure.pi μ, AEStronglyMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·)) := by
+  let f' : ((∀ i : (sᶜ : Finset δ), π i) × (∀ i : (s : Finset δ), π i)) → E :=
+    f ∘' MeasurableEquiv.piFinsetComplUnion π s
+  have : AEStronglyMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
+    rw [← measurePreserving_piFinsetComplUnion .. |>.map_eq] at hf
+    exact hf.comp_measurable (MeasurableEquiv.measurable _)
+  have h' : ∀ᵐ (x : (i : ↥sᶜ) → π ↑i) ∂Measure.pi (μ ·.1),
+    AEStronglyMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=
+    AEStronglyMeasurable.prodMk_left this
+  let e := MeasurableEquiv.piFinsetComplUnion π s
+  rw [← measurePreserving_piFinsetComplUnion μ _ |>.map_eq, e.measurableEmbedding.ae_map_iff]
+  filter_upwards [Measure.quasiMeasurePreserving_fst.ae h'] with x hx
+  simp_rw [f', Function.dcomp, MeasurableEquiv.piFinsetComplUnion_apply] at hx
+  simp_rw [e, MeasurableEquiv.piFinsetComplUnion_apply, Equiv.updateFinset_piFinsetComplUnion, hx]
 
 variable (μ f) in
 /- A function `f` is integrable w.r.t. any subset of the variables in `s` -/
 def FiberIntegrable (s : Finset δ) : Prop :=
   ∀ t ⊆ s, IntegrableWRT μ f t
 
--- theorem IntegrableWRT_def (hf : IntegrableWRT μ f s) (ht : t ⊆ s) : IntegrableWRT μ f t := by
---   filter_upwards [hf] with x hx
-
-
-theorem IntegrableWRT.mono [∀ (i : δ), SigmaFinite (μ i)] (hf : IntegrableWRT μ f s) (ht : t ⊆ s) : IntegrableWRT μ f t := by
-  filter_upwards [hf] with x hx
+theorem IntegrableWRT.mono [∀ (i : δ), SigmaFinite (μ i)] (hf : IntegrableWRT μ f s) (ht : t ⊆ s) :
+    IntegrableWRT μ f t := by
+  refine ⟨hf.1, ?_⟩
+  filter_upwards [hf.2, lmarginal_union_ae μ (‖f ·‖ₑ) hf.1.enorm (t := s \ t) disjoint_sdiff]
+    with x hx h2x
   constructor
-  · sorry
+  ·
+    refine hf.1.comp_quasiMeasurePreserving ?_
+
+
+
   · simp_rw [Integrable, HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))] at hx
-    rw [← Finset.union_sdiff_of_subset ht, lmarginal_union'] at hx
-    swap
-    fun_prop
-    simp_rw [HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))]
+    rw [← Finset.union_sdiff_of_subset ht, h2x] at hx
+
+    -- simp_rw [HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))]
 
 
 

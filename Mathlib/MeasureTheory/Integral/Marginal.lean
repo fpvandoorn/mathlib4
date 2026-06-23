@@ -6,6 +6,7 @@ Authors: Floris van Doorn, Heather Macbeth
 module
 
 public import Mathlib.MeasureTheory.Constructions.Pi
+public import Mathlib.Tactic.ClickSuggestions -- delete when making Mathlib PR
 
 /-!
 # Marginals of multivariate functions
@@ -57,6 +58,7 @@ since there is no well-behaved measure on the domain of `f`.
 
 @[expose] public section
 
+#click_suggestions
 
 open scoped ENNReal
 open Set Function Equiv Finset
@@ -101,10 +103,9 @@ theorem _root_.Measurable.lmarginal [∀ i, SigmaFinite (μ i)] (hf : Measurable
 /-- A generalization of `lmarginal_congr` that also proves that the marginal doesn't depend on
   a variable `xᵢ` if the function `f` doesn't depend on the variable `xᵢ`. -/
 theorem lmarginal_congr' {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
-    (h : ∀ z₁ z₂ : ∀ i, X i, (∀ i, (i ∈ s ∨ x i = y i) → z₁ i = z₂ i) → f z₁ = f z₂) :
-    (∫⋯∫⁻_s, f ∂μ) x = (∫⋯∫⁻_s, f ∂μ) y := by
+    (h : DependsOn f (s ∪ {i | x i = y i})) : (∫⋯∫⁻_s, f ∂μ) x = (∫⋯∫⁻_s, f ∂μ) y := by
   dsimp [lmarginal, updateFinset_def]
-  grind
+  grind [DependsOn]
 
 /-- The marginal distribution is independent of the variables in `s`.
 
@@ -142,7 +143,7 @@ theorem lmarginal_mono {f g : (∀ i, X i) → ℝ≥0∞} (hfg : f ≤ g) : ∫
 variable [∀ i, SigmaFinite (μ i)]
 
 -- move
-lemma ae_aemeasurable_left_of_prod {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+lemma _root_.AEMeasurable.prodMk_left {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     {μ : Measure α} {ν : Measure β} [SFinite ν]
     {f : α × β → ℝ≥0∞} (hf : AEMeasurable f (μ.prod ν)) :
     ∀ᵐ x ∂μ, AEMeasurable (fun y ↦ f (x, y)) ν := by
@@ -192,15 +193,15 @@ def _root_.Equiv.piFinsetComplUnion [Fintype ι] (s : Finset ι) :
   Equiv.piFinsetUnion α disjoint_compl_left |>.trans <| Equiv.piCongrLeft α <|
   Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
 
-variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
-theorem _root_.Equiv.piFinsetComplUnion_left [Fintype ι] (s : Finset ι)
+variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
+theorem _root_.Equiv.piFinsetComplUnion_eq_of_notMem [Fintype ι] {s : Finset ι}
     {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∉ s) :
     piFinsetComplUnion α s ⟨f, g⟩ i = f ⟨i, Finset.mem_compl.mpr hi⟩ :=
   Equiv.piFinsetUnion_left α disjoint_compl_left (Finset.mem_compl.mpr hi)
     (Finset.mem_union_left s <| Finset.mem_compl.mpr hi)
 
-variable {ι : Type*} [DecidableEq ι] (α : ι → Type*) in
-theorem _root_.Equiv.piFinsetComplUnion_right [Fintype ι] (s : Finset ι)
+variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
+theorem _root_.Equiv.piFinsetComplUnion_eq_of_mem [Fintype ι] {s : Finset ι}
     {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∈ s) :
     piFinsetComplUnion α s ⟨f, g⟩ i = g ⟨i, hi⟩ :=
   Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
@@ -213,6 +214,66 @@ theorem measurePreserving_piFinsetComplUnion [Fintype δ] (s : Finset δ) :
   measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
     measurePreserving_piCongrLeft μ <|
     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
+
+variable {δ' : Type*} {π : δ' → Type*} [(i : δ') → MeasurableSpace (π i)] [DecidableEq δ'] in
+lemma MeasurableEquiv.piFinsetComplUnion_apply [Fintype δ'] {s : Finset δ'}
+    (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i)) :
+    MeasurableEquiv.piFinsetComplUnion π s x =
+    Equiv.piFinsetComplUnion π s x := rfl
+
+variable {δ' : Type*} {π : δ' → Type*} [DecidableEq δ'] in
+lemma Equiv.updateFinset_piFinsetComplUnion [Fintype δ'] {s : Finset δ'}
+    (x : ((i : ↥sᶜ) → π i) × ((i : ↥s) → π i))
+    (y : (i : ↥s) → π i) :
+    updateFinset (Equiv.piFinsetComplUnion π s x) s y =
+    Equiv.piFinsetComplUnion π s (x.1, y) := by
+  ext i
+  by_cases hi : i ∈ s
+  · simpa [updateFinset, hi] using piFinsetComplUnion_eq_of_mem (f := x.1) (g := y) hi |>.symm
+  · simp only [updateFinset, hi, ↓reduceDIte, piFinsetComplUnion_eq_of_notMem hi]
+
+lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+    ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·)) := by
+  let f' : ((∀ i : (sᶜ : Finset δ), X i) × (∀ i : (s : Finset δ), X i)) → ℝ≥0∞ :=
+    f ∘' MeasurableEquiv.piFinsetComplUnion X s
+  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
+    rw [← measurePreserving_piFinsetComplUnion .. |>.map_eq] at hf
+    exact hf.comp_measurable (MeasurableEquiv.measurable _)
+  have h' : ∀ᵐ (x : (i : ↥sᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
+      AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=
+    AEMeasurable.prodMk_left this
+  let e := MeasurableEquiv.piFinsetComplUnion X s
+  rw [← measurePreserving_piFinsetComplUnion μ _ |>.map_eq, e.measurableEmbedding.ae_map_iff]
+  filter_upwards [Measure.quasiMeasurePreserving_fst.ae h'] with x hx
+  simp_rw [f', Function.dcomp, MeasurableEquiv.piFinsetComplUnion_apply] at hx
+  simp_rw [e, MeasurableEquiv.piFinsetComplUnion_apply, Equiv.updateFinset_piFinsetComplUnion, hx]
+
+-- open MeasurableSpace in
+-- lemma absolutelyContinuous_generateFrom_iff {α : Type*} {C : Set (Set α)}
+--     {μ ν : Measure[generateFrom C] α} (h : ∀ s ∈ C, ν s = 0 → μ s = 0) : μ ≪ ν := by
+--   apply Measure.AbsolutelyContinuous.mk fun s hs hνs ↦ ?_
+--   induction hs with
+--   | basic u hu => exact h u hu hνs
+--   | empty => exact measure_empty
+--   | compl t ht ih => sorry
+--   | iUnion f hf ih => sorry
+
+
+-- move / is this true?
+lemma quasiMeasurePreserving_updateFinset [Fintype δ] :
+  Measure.QuasiMeasurePreserving
+    (fun a : ((i : δ) → X i) × ((i : s) → X i) ↦ updateFinset a.1 s a.2)
+    ((Measure.pi μ).prod (Measure.pi fun i ↦ μ i)) (Measure.pi μ) := by
+  refine ⟨measurable_updateFinset', ?_⟩
+  sorry
+
+lemma _root_.AEMeasurable.marginal [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+    AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (Measure.pi (μ ·)) := by
+  apply AEMeasurable.lintegral_prod_right
+  exact hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
+
+
+
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i}
@@ -236,38 +297,15 @@ theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
 
 theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
-  let f' : ((∀ i : ((s ∪ t)ᶜ : Finset δ), X i) × (∀ i : (s ∪ t : Finset δ), X i)) → ℝ≥0∞ :=
-    f ∘' MeasurableEquiv.piFinsetComplUnion X (s ∪ t)
-  have : AEMeasurable f' ((Measure.pi (μ ·.1)).prod (Measure.pi (μ ·.1))) := by
-    rw [← measurePreserving_piFinsetComplUnion .. |>.map_eq] at hf
-    exact AEMeasurable.comp_measurable hf (MeasurableEquiv.measurable _)
-  have h' : ∀ᵐ (x : (i : ↥(s ∪ t)ᶜ) → X ↑i) ∂Measure.pi (μ ·.1),
-    AEMeasurable (fun y ↦ f' (x, y)) (Measure.pi (μ ·.1)) :=
-    ae_aemeasurable_left_of_prod this
-  have h'' : ∀ᵐ x ∂Measure.pi μ,
-      AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi (μ ·.1)) := by
-    let e := MeasurableEquiv.piFinsetComplUnion X (s ∪ t)
-    rw [← measurePreserving_piFinsetComplUnion μ _ |>.map_eq, e.measurableEmbedding.ae_map_iff]
-    filter_upwards [Measure.quasiMeasurePreserving_fst.ae h'] with x hx
-    convert hx with y
-    funext i
-    by_cases hi : i ∈ s ∪ t
-    · simpa [updateFinset, hi] using piFinsetComplUnion_right (f := x.1) (g := y) X _ hi |>.symm
-    · simp only [updateFinset, hi, e]
-      -- this is ugly, what is a better way?
-      change (piFinsetComplUnion X (s ∪ t)) _ _ = (piFinsetComplUnion X (s ∪ t)) _ _
-      rw [piFinsetComplUnion_left, piFinsetComplUnion_left] <;> exact hi
-  filter_upwards [h''] with x hx
+  filter_upwards [hf.comp_updateFinset] with x hx
   exact lmarginal_union_ae_apply μ f hx hst
-
--- ToDo: add variant where s ∪ t is univ
 
 theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
   ext1 x
   exact lmarginal_union_ae_apply μ f (hf.comp measurable_updateFinset).aemeasurable hst
 
--- todo: rename lmarginal_union_rev or something
+-- todo: rename to `lmarginal_union_rev` or something
 theorem lmarginal_union' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {s t : Finset δ}
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_t, ∫⋯∫⁻_s, f ∂μ ∂μ := by
   rw [Finset.union_comm, lmarginal_union μ f hf hst.symm]
@@ -324,7 +362,7 @@ theorem lmarginal_lmarginal_compl [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ 
     (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
   obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
   rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
-  grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl]
+  grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl, DependsOn]
 
 theorem lmarginal_compl_lmarginal [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
     (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by

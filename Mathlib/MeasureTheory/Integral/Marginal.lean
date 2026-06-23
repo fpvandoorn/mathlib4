@@ -99,39 +99,22 @@ theorem _root_.Measurable.lmarginal [∀ i, SigmaFinite (μ i)] (hf : Measurable
   exact Subsingleton.measurable
 
 /-- A generalization of `lmarginal_congr` that also proves that the marginal doesn't depend on
-  a variable if the function `f` doesn't. -/
-theorem lmarginal_congr' [Fintype δ] {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
-    (h : ∀ i ∉ s, x i ≠ y i → ∀ z₁ z₂ : ∀ i, X i, (∀ j ≠ i, z₁ j = z₂ j) → f z₁ = f z₂) :
+  a variable `xᵢ` if the function `f` doesn't depend on the variable `xᵢ`. -/
+theorem lmarginal_congr' {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
+    (h : ∀ z₁ z₂ : ∀ i, X i, (∀ i, (i ∈ s ∨ x i = y i) → z₁ i = z₂ i) → f z₁ = f z₂) :
     (∫⋯∫⁻_s, f ∂μ) x = (∫⋯∫⁻_s, f ∂μ) y := by
-  classical
   dsimp [lmarginal, updateFinset_def]
-  congr with u
-  generalize ht : {i ∉ s | x i ≠ y i} = t
-  induction t using Finset.induction generalizing y with
-  | empty =>
-    simp only [ne_eq, filter_eq_empty_iff, Finset.mem_compl, Decidable.not_not] at ht
-    rcongr; exact ht ‹_›
-  | insert i t h ih =>
-    have hi : i ∉ s :=
-      Finset.mem_compl.mp <| mem_of_mem_filter _ <| ht ▸ Finset.mem_insert_self i t
-    let z := Function.update y i (x i)
-    have := ih (y := z) ?_ ?_
-    rw [this]
-    apply h
+  grind
 
+/-- The marginal distribution is independent of the variables in `s`.
 
-  congr with i
-  congr with hi
-  obtain h|h := h i hi
-  · exact h
-  ·
-
-
-/-- The marginal distribution is independent of the variables in `s`. -/
+Special case of `lmarginal_congr'` (though proving it directly is easier than using
+`lmarginal_congr'`) -/
 theorem lmarginal_congr {x y : ∀ i, X i} (f : (∀ i, X i) → ℝ≥0∞)
     (h : ∀ i ∉ s, x i = y i) :
     (∫⋯∫⁻_s, f ∂μ) x = (∫⋯∫⁻_s, f ∂μ) y := by
-  dsimp [lmarginal, updateFinset_def]; rcongr; exact h _ ‹_›
+  dsimp only [lmarginal, updateFinset_def]
+  grind
 
 theorem lmarginal_update_of_mem {i : δ} (hi : i ∈ s)
     (f : (∀ i, X i) → ℝ≥0∞) (x : ∀ i, X i) (y : X i) :
@@ -284,6 +267,7 @@ theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
   ext1 x
   exact lmarginal_union_ae_apply μ f (hf.comp measurable_updateFinset).aemeasurable hst
 
+-- todo: rename lmarginal_union_rev or something
 theorem lmarginal_union' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {s t : Finset δ}
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_t, ∫⋯∫⁻_s, f ∂μ ∂μ := by
   rw [Finset.union_comm, lmarginal_union μ f hf hst.symm]
@@ -337,13 +321,14 @@ instance [Fintype δ] [∀ i, NeZero (μ i)] : NeZero (Measure.pi μ) := by
   simp [NeZero.ne]
 
 theorem lmarginal_lmarginal_compl [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : AEMeasurable f (.pi μ)) :
-    (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
   obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
   rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
-  rw [Finset.union_compl, ← lintegral_eq_lmarginal_univ] at hy
-  apply lmarginal_congr
+  grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl]
 
+theorem lmarginal_compl_lmarginal [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+  simpa using lmarginal_lmarginal_compl f hf (s := sᶜ)
 
 theorem lmarginal_image [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
     {f : (∀ i, X (e i)) → ℝ≥0∞} (hf : Measurable f) (x : ∀ i, X i) :

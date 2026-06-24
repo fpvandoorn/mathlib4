@@ -42,18 +42,21 @@ space (e.g. `((ι ⊕ ι') → ℝ) ≃ (ι → ℝ) × (ι' → ℝ)`).
 * `lmarginal_union` is the analogue of Tonelli's theorem for iterated integrals. It states that
   for measurable functions `f` and disjoint finsets `s` and `t` we have
   `∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ`.
+* Similarly, `lmarginal_union_ae` gives a a.e.-equality ofthis under the weaker assumption
+  that `f` is a.e.-measurable.
+* If `s` and `t` are complements, then we can upgrade this to an actual equality again, see
+  `lmarginal_lmarginal_compl`
 
 ## Implementation notes
 
 The function `f` can have an arbitrary product as its domain (even infinite products), but the
 set `s` of integration variables is a `Finset`. We are assuming that the function `f` is measurable
-for most of this file. Note that asking whether it is `AEMeasurable` is not even well-posed,
-since there is no well-behaved measure on the domain of `f`.
+for most of this file.
 
-## TODO
-
-* Define the marginal function for functions taking values in a Banach space.
-
+Some results require that `f` is `AEMeasurable`, in which case we do have to assume that the
+there are finitely many factors in the product.
+Even to state that `f` is AEMeasurable as a function on finitely many coordinates we need to assume
+that there are finitely many factors
 -/
 
 @[expose] public section
@@ -143,6 +146,44 @@ theorem lmarginal_mono {f g : (∀ i, X i) → ℝ≥0∞} (hfg : f ≤ g) : ∫
   fun _ => lintegral_mono fun _ => hfg _
 
 variable [∀ i, SigmaFinite (μ i)]
+
+theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
+    {x : (i : δ) → X i}
+    (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi (μ ·)))
+    (hst : Disjoint s t) : (∫⋯∫⁻_s ∪ t, f ∂μ) x = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
+  let e := MeasurableEquiv.piFinsetUnion X hst
+  calc (∫⋯∫⁻_s ∪ t, f ∂μ) x
+      = ∫⁻ (y : (i : ↥(s ∪ t)) → X i), f (updateFinset x (s ∪ t) y)
+          ∂.pi fun i' : ↥(s ∪ t) ↦ μ i' := rfl
+    _ = ∫⁻ (y : ((i : s) → X i) × ((j : t) → X j)), f (updateFinset x (s ∪ t) _)
+          ∂(Measure.pi fun i : s ↦ μ i).prod (.pi fun j : t ↦ μ j) := by
+        rw [measurePreserving_piFinsetUnion hst μ |>.lintegral_map_equiv]
+    _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
+          ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
+        apply lintegral_prod
+        rw [← measurePreserving_piFinsetUnion hst μ |>.map_eq] at hx
+        exact hx.comp_measurable (g := f ∘ updateFinset x _) e.measurable
+    _ = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
+        simp_rw [lmarginal, updateFinset_updateFinset hst]
+        rfl
+
+theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
+    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
+  ext1 x
+  exact lmarginal_union_ae_apply μ f (hf.comp measurable_updateFinset).aemeasurable hst
+
+-- todo: rename to `lmarginal_union_rev` or something
+theorem lmarginal_union' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {s t : Finset δ}
+    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_t, ∫⋯∫⁻_s, f ∂μ ∂μ := by
+  rw [Finset.union_comm, lmarginal_union μ f hf hst.symm]
+
+@[simp] theorem lmarginal_univ [Fintype δ] {f : (∀ i, X i) → ℝ≥0∞} :
+    ∫⋯∫⁻_univ, f ∂μ = fun _ => ∫⁻ x, f x ∂Measure.pi μ := by
+  let e : { j // j ∈ Finset.univ } ≃ δ := Equiv.subtypeUnivEquiv mem_univ
+  ext1 x
+  simp_rw [lmarginal, measurePreserving_piCongrLeft μ e |>.lintegral_map_equiv, updateFinset_def]
+  simp
+  rfl
 
 -- move
 lemma _root_.AEMeasurable.prodMk_left {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
@@ -258,14 +299,12 @@ with `x` the components in `s` and `y` the components not in `s`. -/
 def _root_.MeasurableEquiv.piFinsetSwap (s : Finset δ') :
     ((∀ i, π i) × ∀ i : s, π i) ≃ᵐ (∀ i, π i) × ∀ i : s, π i where
   toEquiv := Equiv.piFinsetSwap π s
-  measurable_toFun := measurable_updateFinset'.prod <|
-    measurable_pi_lambda _ fun i ↦ (measurable_pi_apply (i : δ')).comp measurable_fst
-  measurable_invFun := measurable_updateFinset'.prod <|
-    measurable_pi_lambda _ fun i ↦ (measurable_pi_apply (i : δ')).comp measurable_fst
+  measurable_toFun := by rw [funext <| Equiv.piFinsetSwap_apply _ _]; fun_prop
+  measurable_invFun := by rw [funext <| Equiv.piFinsetSwap_symm_apply _ _]; fun_prop
 
 variable {δ' : Type*} (π : δ' → Type*) [(i : δ') → MeasurableSpace (π i)]
   [DecidableEq δ'] in
-lemma MeasurableEquiv.piFinsetSwap_apply {s : Finset δ'} (x : (∀ i, π i) × ∀ i : s, π i) :
+lemma _root_.MeasurableEquiv.piFinsetSwap_apply (s : Finset δ') (x : (∀ i, π i) × ∀ i : s, π i) :
     MeasurableEquiv.piFinsetSwap π s x = Equiv.piFinsetSwap π s x := rfl
 
 variable {δ' : Type*} (π : δ' → Type*) [DecidableEq δ'] {s : Finset δ'} in
@@ -276,10 +315,10 @@ theorem preimage_piFinsetSwap (u : ∀ i, Set (π i)) (v : ∀ i : s, Set (π i)
   simp_rw [Set.mem_preimage, piFinsetSwap_apply]
   grind [updateFinset]
 
-variable {ι : Type*} [DecidableEq ι] [Fintype ι]
+variable {ι : Type*} [DecidableEq ι] [Fintype ι] in
 lemma filter_univ_mem (s : Finset ι) : ({i | i ∈ s} : Finset ι) = s := by simp
 
-variable {ι : Type*} [DecidableEq ι] [Fintype ι]
+variable {ι : Type*} [DecidableEq ι] [Fintype ι] in
 @[simp]
 lemma filter_univ_notMem (s : Finset ι) : ({i | i ∉ s} : Finset ι) = sᶜ := by
   simp [← Finset.mem_compl]
@@ -315,15 +354,14 @@ theorem map_piFinsetSwap [Fintype δ] (ν : ∀ i : s, Measure (X i)) [∀ i, Si
   have : ∀ i, SigmaFinite (updateFinset μ s ν i) := by grind [updateFinset]
   apply Measure.prod_eq_generateFrom generateFrom_pi generateFrom_pi isPiSystem_pi isPiSystem_pi
     ?_ ?_ ?_ |>.symm
-  · exact .pi (fun i ↦ (updateFinset μ s ν i).toFiniteSpanningSetsIn)
-  · exact .pi (fun i : s ↦ (μ i).toFiniteSpanningSetsIn)
+  · exact .pi fun i ↦ (updateFinset μ s ν i).toFiniteSpanningSetsIn
+  · exact .pi fun i : s ↦ (μ i).toFiniteSpanningSetsIn
   simp_rw [Set.mem_image, Set.mem_pi, Set.mem_univ, mem_setOf_eq, forall_const,
     forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, pi_pi]
   intro u hu v hv
-  rw [map_apply (MeasurableEquiv.measurable _) (.prod (.univ_pi hu) (.univ_pi hv))]
-  conv_lhs => arg 2; arg 1; eta_expand
-  simp_rw [MeasurableEquiv.piFinsetSwap_apply, preimage_piFinsetSwap, prod_prod, pi_pi,
-    univ_eq_attach, prod_updateFinset_mul_prod_eq]
+  simp_rw [map_apply (MeasurableEquiv.measurable _) (.prod (.univ_pi hu) (.univ_pi hv)),
+    funext <| MeasurableEquiv.piFinsetSwap_apply _ _, preimage_piFinsetSwap, prod_prod,
+    pi_pi, univ_eq_attach, prod_updateFinset_mul_prod_eq]
 
 variable {ι : Type*} (π : ι → Type*) [DecidableEq ι] in
 @[simp]
@@ -337,65 +375,72 @@ theorem measurePreserving_piFinsetSwap [Fintype δ] (s : Finset δ) :
       (.prod (.pi μ) (.pi (μ ·))) :=
   ⟨MeasurableEquiv.measurable _, by rw [map_piFinsetSwap, updateFinsetSelf]⟩
 
--- move?
+-- move
 lemma quasiMeasurePreserving_updateFinset [Fintype δ] :
   QuasiMeasurePreserving
     (fun a : ((i : δ) → X i) × ((i : s) → X i) ↦ updateFinset a.1 s a.2)
-    ((Measure.pi μ).prod (Measure.pi fun i ↦ μ i)) (Measure.pi μ) := by
+    ((Measure.pi μ).prod (Measure.pi (μ ·))) (Measure.pi μ) := by
   convert quasiMeasurePreserving_fst.comp
     (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
   rfl
 
 variable {μ} (s) in
-lemma _root_.AEMeasurable.comp_updateFinset' [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
     AEMeasurable (uncurry (f <| updateFinset · s ·))
       (Measure.pi μ |>.prod <| Measure.pi (μ ·)) :=
   hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
 
-variable {μ} (s) in
-lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
-    ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·)) :=
-  (hf.comp_updateFinset' s).prodMk_left
+-- move
+instance [Fintype δ] [∀ i, NeZero (μ i)] : NeZero (Measure.pi μ) := by
+  rw [neZero_iff, ← Measure.measure_univ_ne_zero, Measure.pi_univ, Finset.prod_ne_zero_iff]
+  simp [NeZero.ne]
 
-lemma _root_.AEMeasurable.marginal [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
+section Fintype
+variable [Fintype δ]
+
+variable (f s) in
+/-- The function `f` is a.e.-measurable as a function on the coordinates in `f`, for almost all
+values in the remaining arguments. -/
+def AEMeasurableWRT (f : (∀ i, X i) → ℝ≥0∞) (s : Finset δ) (μ : ∀ i, Measure (X i)) :
+    Prop :=
+  ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·))
+
+variable {μ} (s) in
+lemma _root_.AEMeasurable.ae_comp_updateFinset (hf : AEMeasurable f (.pi μ)) :
+    AEMeasurableWRT f s μ :=
+  hf.comp_updateFinset s |>.prodMk_left
+
+lemma _root_.AEMeasurable.marginal (hf : AEMeasurable f (.pi μ)) :
     AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (Measure.pi (μ ·)) := by
   apply AEMeasurable.lintegral_prod_right
   exact hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
 
-theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
-    {x : (i : δ) → X i}
-    (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi fun x ↦ μ ↑x))
-    (hst : Disjoint s t) : (∫⋯∫⁻_s ∪ t, f ∂μ) x = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
-  let e := MeasurableEquiv.piFinsetUnion X hst
-  calc (∫⋯∫⁻_s ∪ t, f ∂μ) x
-      = ∫⁻ (y : (i : ↥(s ∪ t)) → X i), f (updateFinset x (s ∪ t) y)
-          ∂.pi fun i' : ↥(s ∪ t) ↦ μ i' := rfl
-    _ = ∫⁻ (y : ((i : s) → X i) × ((j : t) → X j)), f (updateFinset x (s ∪ t) _)
-          ∂(Measure.pi fun i : s ↦ μ i).prod (.pi fun j : t ↦ μ j) := by
-        rw [measurePreserving_piFinsetUnion hst μ |>.lintegral_map_equiv]
-    _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
-          ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
-        apply lintegral_prod
-        rw [← measurePreserving_piFinsetUnion hst μ |>.map_eq] at hx
-        exact hx.comp_measurable (g := f ∘ updateFinset x _) e.measurable
-    _ = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
-        simp_rw [lmarginal, updateFinset_updateFinset hst]
-        rfl
-
-theorem lmarginal_union_ae [Fintype δ] (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
+theorem lmarginal_union_ae' (f : (∀ i, X i) → ℝ≥0∞)
+    (hf : ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x (s ∪ t) ·) (Measure.pi (μ ·)))
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
-  filter_upwards [hf.comp_updateFinset (s ∪ t)] with x hx
+  filter_upwards [hf] with x hx
   exact lmarginal_union_ae_apply μ f hx hst
 
-theorem lmarginal_union (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f)
-    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
-  ext1 x
-  exact lmarginal_union_ae_apply μ f (hf.comp measurable_updateFinset).aemeasurable hst
+theorem lmarginal_union_ae (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
+    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ :=
+  lmarginal_union_ae' μ f (hf.ae_comp_updateFinset (s ∪ t)) hst
 
--- todo: rename to `lmarginal_union_rev` or something
-theorem lmarginal_union' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {s t : Finset δ}
-    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ = ∫⋯∫⁻_t, ∫⋯∫⁻_s, f ∂μ ∂μ := by
-  rw [Finset.union_comm, lmarginal_union μ f hf hst.symm]
+variable {μ}
+
+theorem lintegral_eq_lmarginal_univ {f : (∀ i, X i) → ℝ≥0∞} (x : ∀ i, X i) :
+    ∫⁻ x, f x ∂Measure.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
+
+theorem lmarginal_lmarginal_compl [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+  obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
+  rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
+  grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl, DependsOn]
+
+theorem lmarginal_compl_lmarginal [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+  simpa using lmarginal_lmarginal_compl f hf (s := sᶜ)
+
+end Fintype
 
 variable {μ}
 
@@ -428,32 +473,6 @@ theorem lmarginal_erase' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {
     (hi : i ∈ s) :
     ∫⋯∫⁻_s, f ∂μ = ∫⋯∫⁻_(erase s i), (fun x ↦ ∫⁻ xᵢ, f (Function.update x i xᵢ) ∂μ i) ∂μ := by
   simpa [insert_erase hi] using lmarginal_insert' _ hf (notMem_erase i s)
-
-@[simp] theorem lmarginal_univ [Fintype δ] {f : (∀ i, X i) → ℝ≥0∞} :
-    ∫⋯∫⁻_univ, f ∂μ = fun _ => ∫⁻ x, f x ∂Measure.pi μ := by
-  let e : { j // j ∈ Finset.univ } ≃ δ := Equiv.subtypeUnivEquiv mem_univ
-  ext1 x
-  simp_rw [lmarginal, measurePreserving_piCongrLeft μ e |>.lintegral_map_equiv, updateFinset_def]
-  simp
-  rfl
-
-theorem lintegral_eq_lmarginal_univ [Fintype δ] {f : (∀ i, X i) → ℝ≥0∞} (x : ∀ i, X i) :
-    ∫⁻ x, f x ∂Measure.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
-
--- move
-instance [Fintype δ] [∀ i, NeZero (μ i)] : NeZero (Measure.pi μ) := by
-  rw [neZero_iff, ← Measure.measure_univ_ne_zero, Measure.pi_univ, Finset.prod_ne_zero_iff]
-  simp [NeZero.ne]
-
-theorem lmarginal_lmarginal_compl [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
-  obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
-  rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
-  grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl, DependsOn]
-
-theorem lmarginal_compl_lmarginal [Fintype δ] [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
-  simpa using lmarginal_lmarginal_compl f hf (s := sᶜ)
 
 theorem lmarginal_image [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
     {f : (∀ i, X (e i)) → ℝ≥0∞} (hf : Measurable f) (x : ∀ i, X i) :

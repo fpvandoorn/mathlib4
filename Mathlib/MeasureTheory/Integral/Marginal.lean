@@ -395,44 +395,53 @@ instance [Fintype δ] [∀ i, NeZero (μ i)] : NeZero (Measure.pi μ) := by
   rw [neZero_iff, ← Measure.measure_univ_ne_zero, Measure.pi_univ, Finset.prod_ne_zero_iff]
   simp [NeZero.ne]
 
+variable {μ}
+
 section Fintype
 variable [Fintype δ]
 
-variable (f s) in
 /-- The function `f` is a.e.-measurable as a function on the coordinates in `f`, for almost all
 values in the remaining arguments. -/
 def AEMeasurableWRT (f : (∀ i, X i) → ℝ≥0∞) (s : Finset δ) (μ : ∀ i, Measure (X i)) :
     Prop :=
   ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·))
 
-variable {μ} (s) in
-lemma _root_.AEMeasurable.ae_comp_updateFinset (hf : AEMeasurable f (.pi μ)) :
+lemma _root_.AEMeasurable.aemeasurableWRT (hf : AEMeasurable f (.pi μ)) :
     AEMeasurableWRT f s μ :=
   hf.comp_updateFinset s |>.prodMk_left
+
+lemma AEMeasurableWRT.mono (hf : AEMeasurableWRT f s μ) (h : t ⊆ s) :
+    AEMeasurableWRT f t μ := by
+  sorry
+
+lemma aemeasurableWRT_univ_iff : AEMeasurableWRT f univ μ ↔ AEMeasurable f (.pi μ) := by
+  refine ⟨?_, (·.aemeasurableWRT)⟩
+  sorry
+
+theorem IntegrableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e)
+    {s : Finset δ'} {f : (∀ i, X (e i)) → ℝ≥0∞} (hf : AEMeasurableWRT f s (μ ∘' e)) :
+    AEMeasurableWRT (f ∘' (· ∘' e)) (s.image e) μ :=
+  have h : Measurable ((· ∘' e) : (∀ i, X i) → _) :=
+    measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
+  sorry
+
 
 lemma _root_.AEMeasurable.marginal (hf : AEMeasurable f (.pi μ)) :
     AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (Measure.pi (μ ·)) := by
   apply AEMeasurable.lintegral_prod_right
   exact hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
 
-theorem lmarginal_union_ae' (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x (s ∪ t) ·) (Measure.pi (μ ·)))
+theorem lmarginal_union_ae (hf : AEMeasurableWRT f (s ∪ t) μ)
     (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ := by
   filter_upwards [hf] with x hx
   exact lmarginal_union_ae_apply μ f hx hst
 
-theorem lmarginal_union_ae (f : (∀ i, X i) → ℝ≥0∞) (hf : AEMeasurable f (.pi μ))
-    (hst : Disjoint s t) : ∫⋯∫⁻_s ∪ t, f ∂μ =ᵐ[Measure.pi μ] ∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ :=
-  lmarginal_union_ae' μ f (hf.ae_comp_updateFinset (s ∪ t)) hst
-
-variable {μ}
-
-theorem lintegral_eq_lmarginal_univ {f : (∀ i, X i) → ℝ≥0∞} (x : ∀ i, X i) :
+theorem lintegral_eq_lmarginal_univ (x : ∀ i, X i) :
     ∫⁻ x, f x ∂Measure.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
 
 theorem lmarginal_lmarginal_compl [∀ i, NeZero (μ i)] (f : (∀ i, X i) → ℝ≥0∞)
     (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
-  obtain ⟨y, hy⟩ := lmarginal_union_ae μ f hf (disjoint_compl_right (a := s)) |>.exists
+  obtain ⟨y, hy⟩ := lmarginal_union_ae hf.aemeasurableWRT (disjoint_compl_right (a := s)) |>.exists
   rw [lintegral_eq_lmarginal_univ y, ← Finset.union_compl, hy]
   grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl, DependsOn]
 
@@ -441,8 +450,6 @@ theorem lmarginal_compl_lmarginal [∀ i, NeZero (μ i)] (f : (∀ i, X i) → �
   simpa using lmarginal_lmarginal_compl f hf (s := sᶜ)
 
 end Fintype
-
-variable {μ}
 
 /-- Peel off a single integral from a `lmarginal` integral at the beginning (compare with
 `lmarginal_insert'`, which peels off an integral at the end). -/

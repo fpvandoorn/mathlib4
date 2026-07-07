@@ -511,22 +511,20 @@ The following are maps are quasi-measure-preserving:
 (∀ i : sᶜ ∪ t, X i) × (∀ i : s, X i) -> (π₂)
 (∀ i : s, X i)
 
-Let's call the composition g. Then, ∀ᵐ x, AEMeasurable (y ↦ g (x, y))
+Let's call the composition g. Can we use this to get the following result?
 -/
 lemma AEMeasurableWRT.mono (hf : AEMeasurableWRT f s μ) (h : t ⊆ s) :
     AEMeasurableWRT f t μ := by
-  -- refine hf.mp ?_
-
   filter_upwards [hf] with x hx
 
-  have' g := (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving.comp
-    (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h)
-    |>.comp (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
-  have' g' := (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h) |>.comp
-    (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving
-  have := hx.comp_quasiMeasurePreserving g'
-  have := this.prodMk_left
-  simp only [comp_apply, MeasurableEquiv.piFinsetSwap_apply, piFinsetSwap_apply] at this
+  -- have' g := (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving.comp
+  --   (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h)
+  --   |>.comp (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
+  -- have' g' := (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h) |>.comp
+  --   (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving
+  -- have := hx.comp_quasiMeasurePreserving g'
+  -- have := this.prodMk_left
+  -- simp only [comp_apply, MeasurableEquiv.piFinsetSwap_apply, piFinsetSwap_apply] at this
 
 
   -- have := QuasiMeasurePreserving.piCoe_of_subset μ h
@@ -660,5 +658,7 @@ theorem lintegral_le_of_lmarginal_le [Fintype δ] (s : Finset δ) {f g : (∀ i,
   simp_rw [lintegral_eq_lmarginal_univ x, lmarginal_le_of_subset (Finset.subset_univ s) hf hg hfg x]
 
 end LMarginal
+
+
 
 end MeasureTheory

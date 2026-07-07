@@ -1,5 +1,6 @@
 import Mathlib.MeasureTheory.Integral.Prod
 import Mathlib.MeasureTheory.Integral.Marginal
+import Mathlib.MeasureTheory.Function.Jacobian
 
 /-!
 # Marginals of Banach valued functions
@@ -321,5 +322,32 @@ theorem integral_le_of_marginal_le [Finite δ] (s : Finset δ) {f g : (∀ i, π
   simp_rw [integral_eq_marginal_univ x, marginal_le_of_subset (Finset.subset_univ s) hf hg hfg x]
 
 end Marginal
+
+variable {δ δ' : Type*} {X : δ → Type*} [∀ i, MeasurableSpace (X i)]
+
+variable {μ : ∀ i, Measure (X i)} [DecidableEq δ]
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+variable {s t : Finset δ} {f : (∀ i, X i) → E} {x : ∀ i, X i}
+variable {i : δ} [NormedAddCommGroup (X i)] [NormedSpace ℝ (X i)]
+
+/- todo: add more measurability/integrability assumptions as needed -/
+theorem change_of_variables {g : (∀ j, X j) → X i} {g' : (∀ j, X j) → X i →L[ℝ] X i}
+  (hg : ∀ (x : ∀ i, X i) (z₀ : X i), HasFDerivAt (fun z ↦ g (Function.update x i z))
+    (g' (Function.update x i z₀)) z₀)
+  (h2g : ∀ (x : ∀ i, X i), Bijective (fun z ↦ g (Function.update x i z))) :
+    ∫⋯∫_s, (fun x ↦ f (Function.update x i (g x))) ∂μ =
+    ∫⋯∫_s, fun x ↦ |(g' x).det| • f x ∂μ := by
+  sorry
+
+-- todo: specialize to versions that have simpler (integrability) hypotheses
+
+theorem change_of_variables' {f : (∀ i, X i) → ℝ≥0∞}
+  {g : (∀ j, X j) → X i} {g' : (∀ j, X j) → X i →L[ℝ] X i}
+  (hg : ∀ (x : ∀ i, X i) (z₀ : X i), HasFDerivAt (fun z ↦ g (Function.update x i z))
+    (g' (Function.update x i z₀)) z₀)
+  (h2g : ∀ (x : ∀ i, X i), Bijective (fun z ↦ g (Function.update x i z))) :
+    ∫⋯∫⁻_s, (fun x ↦ f (Function.update x i (g x))) ∂μ =
+    ∫⋯∫⁻_s, fun x ↦ ENNReal.ofReal |(g' x).det| * f x ∂μ := by
+  sorry
 
 end MeasureTheory

@@ -506,12 +506,14 @@ open scoped Set.Notation in
 /-
 Proof idea:
 The following are maps are quasi-measure-preserving:
-(∀ i, X i) × (∀ i : t, X i) -> (swap)
-(∀ i, X i) × (∀ i : t, X i) -> (equiv)
-(∀ i : sᶜ ∪ t, X i) × (∀ i : s, X i) -> (π₂)
-(∀ i : s, X i)
-
-Let's call the composition g. Can we use this to get the following result?
+(∀ i, X i) × (∀ i : s, X i) -> 1 ⊗ split
+(∀ i, X i) × (∀ i : s \ t, X i) × (∀ i : t, X i) -> swap ⊗ 1
+(∀ i, X i) × (∀ i : s \ t, X i) × (∀ i : t, X i) -> π₁ ⊗ π₃
+(∀ i, X i) × (∀ i : t, X i)
+Let's call the composition g.
+Known: ∀ᵐx, h(g(x, ·)) is a.e. measurable. To prove: ∀ᵐx, h(x, ·) is a.e. measurable, where
+`h = (f <| updateFinset · t ·)`
+Need to somehow encode that `h` doesn't depend on the values in `∀ i : s \ t, X i`.
 -/
 lemma AEMeasurableWRT.mono (hf : AEMeasurableWRT f s μ) (h : t ⊆ s) :
     AEMeasurableWRT f t μ := by

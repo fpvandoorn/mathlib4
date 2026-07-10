@@ -89,7 +89,7 @@ lemma _root_.AEMeasurable.prodMk_left {α β : Type*} [MeasurableSpace α] [Meas
   obtain ⟨g, hg, hfg⟩ := hf
   filter_upwards [MeasureTheory.Measure.ae_ae_eq_curry_of_prod hfg] with x hx
   refine AEMeasurable.congr ?_ hx.symm
-  exact hg.fun_comp (measurable_const.prodMk measurable_id') |>.aemeasurable
+  exact hg.comp (measurable_const.prodMk measurable_id') |>.aemeasurable
 
 -- move
 variable {δ' : Type*} in
@@ -141,8 +141,8 @@ theorem _root_.Equiv.piFinsetComplUnion_eq_of_notMem [Fintype ι] {s : Finset ι
 
 variable {ι : Type*} [DecidableEq ι] {α : ι → Type*} in
 theorem _root_.Equiv.piFinsetComplUnion_eq_of_mem [Fintype ι] {s : Finset ι}
-    {f : ∀ i : ↥sᶜ, α i} {g : ∀ i : s, α i} {i : ι} (hi : i ∈ s) :
-    piFinsetComplUnion α s ⟨f, g⟩ i = g ⟨i, hi⟩ :=
+    {f : (∀ i : ↥sᶜ, α i) × (∀ i : s, α i)} {i : ι} (hi : i ∈ s) :
+    piFinsetComplUnion α s f i = f.2 ⟨i, hi⟩ :=
   Equiv.piFinsetUnion_right α disjoint_compl_left hi <| Finset.mem_union_right _ hi
 
 -- move
@@ -169,7 +169,7 @@ lemma Equiv.updateFinset_piFinsetComplUnion [Fintype δ'] {s : Finset δ'}
     Equiv.piFinsetComplUnion π s (x.1, y) := by
   ext i
   by_cases hi : i ∈ s
-  · simpa [updateFinset, hi] using piFinsetComplUnion_eq_of_mem (f := x.1) (g := y) hi |>.symm
+  · simpa [updateFinset, hi] using piFinsetComplUnion_eq_of_mem (f := (x.1, y)) hi |>.symm
   · simp only [updateFinset, hi, ↓reduceDIte, piFinsetComplUnion_eq_of_notMem hi]
 
 variable {δ' : Type*} (π : δ' → Type*) [DecidableEq δ'] in
@@ -329,6 +329,7 @@ theorem QuasiMeasurePreserving.piCoe [Fintype δ] (s : Finset δ) :
 
 omit [DecidableEq δ] in
 variable (μ) in
+-- only finish if useful
 theorem QuasiMeasurePreserving.piCoe_of_subset {s t : Finset δ} (h : t ⊆ s) :
     QuasiMeasurePreserving (fun (x : ∀ i : s, X i) (i : t) ↦ x ⟨i, h i.2⟩)
       (.pi (μ ·)) (.pi (μ ·)) := by
@@ -350,6 +351,53 @@ theorem QuasiMeasurePreserving.piCoe_of_subset {s t : Finset δ} (h : t ⊆ s) :
   -- convert quasiMeasurePreserving_snd.comp
   --   (measurePreserving_piFinsetComplUnion (μ := μ) s).symm.quasiMeasurePreserving
   -- rfl
+
+omit [DecidableEq δ] in
+-- set_option pp.funBinderTypes true in
+theorem quasiMeasurePreserving_dcomp [Fintype δ] [Fintype δ']
+    {e : δ' → δ} (he : Injective e) :
+    QuasiMeasurePreserving (fun x : ∀ i, X i ↦ x ∘' e)
+    (.pi μ) (.pi fun i' ↦ μ (e i')) := by
+  classical
+  have : Measurable (fun x : ∀ i, X i ↦ x ∘' e) :=
+    measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
+  refine ⟨this, ?_⟩
+  refine .mk fun s hs hμs ↦ ?_
+  rw [map_apply this hs]
+  -- this could be generalized as a separate lemma.
+  rw [← measurePreserving_piFinsetComplUnion (μ := μ) (Finset.univ.image e) |>.map_eq]
+  have : ∀ i, e i ∈ Finset.univ.image e := fun i ↦ Finset.mem_image_of_mem e (Finset.mem_univ i)
+  let e' : δ' ≃ Finset.univ.image e := calc
+    δ' ≃ range e := ofInjective e he
+    _ ≃ Finset.univ.image e := subtypeEquivRight (by simp)
+  have e'_def x : (e' x).1 = e x := rfl
+  have e'_def' x : e' x = ⟨e x, this x⟩ := rfl
+  have e'_symm x : e'.symm ⟨e x, this x⟩ = x := by simp [e', subtypeEquivRight]
+  rw [map_apply sorry sorry, preimage_preimage]
+  simp_rw [funext (dcomp.eq_1 _ _)]
+  simp_rw [MeasurableEquiv.piFinsetComplUnion_apply, piFinsetComplUnion_eq_of_mem (this _)]
+  rw [← preimage_preimage
+    (g := (fun (x : ∀ i : Finset.univ.image e, X i) (i : δ') ↦ x ⟨e i, this i⟩)) (f := Prod.snd),
+    ← univ_prod, prod_prod]
+  rw [← pi_map_piCongrLeft e' (μ ·), ]
+  rw [map_apply sorry sorry, preimage_preimage]
+  sorry
+  -- conv => enter [1, 2, 2, 1, x, i]; rw! [← e'_def'] -- kernel error
+  -- simp_rw [MeasurableEquiv.piCongrLeft_apply_apply]
+  -- convert (postTransparency := .default) mul_zero _
+
+
+theorem updateFinset_image {δ : Type u_1} {δ' : Type u_2}
+    {X : δ → Type u_3} [DecidableEq δ] [DecidableEq δ']
+    {e : δ' → δ} (he : Injective e) {s : Finset δ'} (x : ∀ i, X i)
+    (y : ∀ (i : s.image e), X i) (i : δ') :
+    updateFinset x (s.image e) y (e i) =
+    updateFinset (x ∘' e) s (fun j ↦ y ⟨e j, (Injective.mem_finset_image he).mpr j.2⟩) i := by
+  by_cases hi : i ∈ s
+  · have : e i ∈ s.image e := (Injective.mem_finset_image he).mpr hi
+    simp [updateFinset_def, hi, this]
+  · have : e i ∉ s.image e := he.mem_finset_image.not.mpr hi
+    simp [updateFinset_def, hi, this]
 
 end Move
 
@@ -498,8 +546,17 @@ theorem AEMeasurableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (
     AEMeasurableWRT (f ∘ (· ∘' e)) (s.image e) μ := by
   have h : Measurable ((· ∘' e) : (∀ i, X i) → _) :=
     measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
-  -- filter_upwards [hf] with x hx
-  -- refine hf.comp_measurePreserving ?_
+  have : QuasiMeasurePreserving (fun x : ∀ i, X i ↦ x ∘' e)
+    (Measure.pi μ) (Measure.pi fun i' ↦ μ (e i')) :=
+      sorry
+  filter_upwards [this.ae hf] with x hx
+  convert hx.comp_quasiMeasurePreserving
+    (f := fun (z : ∀ i : s.image e, X i) (i : s) ↦
+      z ⟨e i.1, (Injective.mem_finset_image he).mpr i.2⟩) ?_
+  · simp_rw [funext (Function.dcomp.eq_1 _ _), comp_apply]
+    congr
+    ext i
+    rw [updateFinset_image he]
   sorry
 
 open scoped Set.Notation in
@@ -511,6 +568,14 @@ The following are maps are quasi-measure-preserving:
 (∀ i, X i) × (∀ i : s \ t, X i) × (∀ i : t, X i) -> π₁ ⊗ π₃
 (∀ i, X i) × (∀ i : t, X i)
 Let's call the composition g.
+
+Equivalently
+(∀ i, X i) × (∀ i : s, X i) -> swap
+(∀ i, X i) × (∀ i : t, X i) × (∀ i : s \ t, X i) -> 1 ⊗ split
+(∀ i, X i) × (∀ i : t, X i) × (∀ i : s \ t, X i) -> swap ⊗ 1
+(∀ i, X i) × (∀ i : t, X i) × (∀ i : s \ t, X i) -> π₁ ⊗ π₂
+(∀ i, X i) × (∀ i : t, X i)
+
 Known: ∀ᵐx, h(g(x, ·)) is a.e. measurable. To prove: ∀ᵐx, h(x, ·) is a.e. measurable, where
 `h = (f <| updateFinset · t ·)`
 Need to somehow encode that `h` doesn't depend on the values in `∀ i : s \ t, X i`.
@@ -522,16 +587,6 @@ lemma AEMeasurableWRT.mono (hf : AEMeasurableWRT f s μ) (h : t ⊆ s) :
   -- have' g := (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving.comp
   --   (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h)
   --   |>.comp (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
-  -- have' g' := (QuasiMeasurePreserving.prodMap (.id _) <| QuasiMeasurePreserving.piCoe_of_subset μ h) |>.comp
-  --   (measurePreserving_piFinsetSwap μ t).quasiMeasurePreserving
-  -- have := hx.comp_quasiMeasurePreserving g'
-  -- have := this.prodMk_left
-  -- simp only [comp_apply, MeasurableEquiv.piFinsetSwap_apply, piFinsetSwap_apply] at this
-
-
-  -- have := QuasiMeasurePreserving.piCoe_of_subset μ h
-
-  -- have := QuasiMeasurePreserving.ae_eq_comp
   simp_rw [updateFinset_eq_of_subset h]
 
 

@@ -145,13 +145,14 @@ theorem IntegrableWRT.mono [∀ (i : δ), SigmaFinite (μ i)] (hf : IntegrableWR
     IntegrableWRT μ f t := by
   -- refine ⟨hf.1, ?_⟩
   filter_upwards [hf] with x hx
+  sorry
   -- lmarginal_union_ae μ (‖f ·‖ₑ) hf.enorm (s := s \ t) sdiff_disjoint
 
-  simp_rw [Integrable, HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))] at hx
-  rw [← Finset.sdiff_union_of_subset ht, h2x] at hx
-  have := ae_lt_top' ?_ hx.ne
-  swap
-  · apply AEMeasurable.comp_updateFinset
+  -- simp_rw [Integrable, HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))] at hx
+  -- rw [← Finset.sdiff_union_of_subset ht, h2x] at hx
+  -- have := ae_lt_top' ?_ hx.ne
+  -- swap
+  -- · apply AEMeasurable.comp_updateFinset
   -- simp at hx
     -- simp_rw [HasFiniteIntegral, ← lmarginal.eq_1 (f := (‖f ·‖ₑ))]
 
@@ -160,17 +161,17 @@ theorem IntegrableWRT.mono [∀ (i : δ), SigmaFinite (μ i)] (hf : IntegrableWR
 theorem Integrable.integrableWRT (hf : Integrable f (.pi μ)) : IntegrableWRT μ f univ :=
   sorry
 
-theorem FiberIntegrable.integrableWRT (hf : FiberIntegrable μ f s) : IntegrableWRT μ f s :=
-  hf s subset_rfl
+-- theorem FiberIntegrable.integrableWRT (hf : IntegrableWRT μ f s) : IntegrableWRT μ f s :=
+--   hf s subset_rfl
 
-theorem FiberIntegrable.mono (hf : FiberIntegrable μ f s) (ht : t ⊆ s) : FiberIntegrable μ f t :=
-  fun _u hu ↦ hf _ <| hu.trans ht
+-- theorem FiberIntegrable.mono (hf : FiberIntegrable μ f s) (ht : t ⊆ s) : FiberIntegrable μ f t :=
+--   fun _u hu ↦ hf _ <| hu.trans ht
 
 variable [NormedSpace ℝ E]
 
-theorem FiberIntegrable.marginal (hf : FiberIntegrable μ f s) {t₁ t₂ : Finset δ}
-  (ht : Disjoint t₁ t₂) (ht₁ : t₁ ⊆ s) (ht₂ : t₂ ⊆ s) : FiberIntegrable μ (∫⋯∫_t₁, f ∂μ) t₂ :=
-  sorry
+-- theorem FiberIntegrable.marginal (hf : IntegrableWRT μ f s) {t₁ t₂ : Finset δ}
+--   (ht : Disjoint t₁ t₂) (ht₁ : t₁ ⊆ s) (ht₂ : t₂ ⊆ s) : IntegrableWRT μ (∫⋯∫_t₁, f ∂μ) t₂ :=
+--   sorry
 
 theorem IntegrableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e)
     {s : Finset δ'} {f : (∀ i, π (e i)) → E} (hf : IntegrableWRT (μ ∘' e) f s) :
@@ -179,8 +180,8 @@ theorem IntegrableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he
     measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
   sorry
 
-theorem FiberIntegrable.comp_update (hf : FiberIntegrable μ f s) {i : δ} (hi : i ∈ s) :
-    ∀ᵐ x ∂μ i, FiberIntegrable μ (f ∘ (update · i x)) s :=
+theorem IntegrableWRT.comp_update (hf : IntegrableWRT μ f s) {i : δ} (hi : i ∈ s) :
+    ∀ᵐ x ∂μ i, IntegrableWRT μ (f ∘ (update · i x)) s :=
   sorry
 
 
@@ -266,15 +267,15 @@ variable [CompleteSpace E]
 omit [Fintype δ] in
 variable [Finite δ] in
 theorem marginal_image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (he : Injective e) (s : Finset δ')
-    {f : (∀ i, π (e i)) → E} (hf : FiberIntegrable (μ ∘' e) f s) (x : ∀ i, π i) :
+    {f : (∀ i, π (e i)) → E} (hf : IntegrableWRT (μ ∘' e) f s) (x : ∀ i, π i) :
       (∫⋯∫_s.image e, f ∘ (· ∘' e) ∂μ) x = (∫⋯∫_s, f ∂μ ∘' e) (x ∘' e) := by
   induction s using Finset.induction generalizing x
   case empty => simp
   case insert i s hi ih =>
     obtain ⟨_⟩ := nonempty_fintype δ
     rw [image_insert, marginal_insert _ _ (he.mem_finset_image.not.mpr hi),
-      marginal_insert _ hf.integrableWRT hi]
-    · have h2f : FiberIntegrable (μ ∘' e) f s := hf.mono <| Finset.subset_insert i s
+      marginal_insert _ hf hi]
+    · have h2f : IntegrableWRT (μ ∘' e) f s := hf.mono <| Finset.subset_insert i s
       simp_rw [ih h2f, ← update_comp_eq_of_injective' x he]
     simp_rw [← image_insert]
     exact hf.image he
@@ -285,10 +286,11 @@ theorem marginal_update_of_not_mem {i : δ}
   induction s using Finset.induction generalizing x
   case empty => simp
   case insert i' s hi' ih =>
-    rw [marginal_insert _ hf hi', marginal_insert _ (hf.comp_update) hi']
-    have hii' : i ≠ i' := mt (by rintro rfl; exact mem_insert_self i s) hi
-    simp_rw [update_comm hii',
-      ih (hf.mono <| Finset.subset_insert i' s) (mt Finset.mem_insert_of_mem hi)]
+    sorry
+    -- rw [marginal_insert _ hf hi', marginal_insert _ (hf.comp_update _) hi']
+    -- have hii' : i ≠ i' := mt (by rintro rfl; exact mem_insert_self i s) hi
+    -- simp_rw [update_comm hii',
+    --   ih (hf.mono <| Finset.subset_insert i' s) (mt Finset.mem_insert_of_mem hi)]
 
 theorem marginal_eq_of_subset {f g : (∀ i, π i) → E} (hst : s ⊆ t)
     (hf : IntegrableWRT μ f t) (hg : IntegrableWRT μ g t) (hfg : ∫⋯∫_s, f ∂μ = ∫⋯∫_s, g ∂μ) :
@@ -351,3 +353,6 @@ theorem change_of_variables' {f : (∀ i, X i) → ℝ≥0∞}
   sorry
 
 end MeasureTheory
+
+end
+end Set

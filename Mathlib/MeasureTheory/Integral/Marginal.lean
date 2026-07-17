@@ -87,7 +87,7 @@ lemma _root_.AEMeasurable.prodMk_left {α β : Type*} [MeasurableSpace α] [Meas
     {f : α × β → ℝ≥0∞} (hf : AEMeasurable f (μ.prod ν)) :
     ∀ᵐ x ∂μ, AEMeasurable (fun y ↦ f (x, y)) ν := by
   obtain ⟨g, hg, hfg⟩ := hf
-  filter_upwards [MeasureTheory.Measure.ae_ae_eq_curry_of_prod hfg] with x hx
+  filter_upwards [Measure.ae_ae_eq_curry_of_prod hfg] with x hx
   refine AEMeasurable.congr ?_ hx.symm
   exact hg.comp (measurable_const.prodMk measurable_id') |>.aemeasurable
 
@@ -149,8 +149,7 @@ theorem _root_.Equiv.piFinsetComplUnion_eq_of_mem [Fintype ι] {s : Finset ι}
 theorem measurePreserving_piFinsetComplUnion [Fintype δ] [∀ i, SigmaFinite (μ i)]
     (s : Finset δ) :
     MeasurePreserving (MeasurableEquiv.piFinsetComplUnion X s)
-      ((Measure.pi fun i ↦ μ i.1).prod (Measure.pi fun i ↦ μ i))
-      (Measure.pi fun i ↦ μ i) :=
+      (.prod (.pi (μ ·)) (.pi (μ ·))) (.pi μ) :=
   measurePreserving_piFinsetUnion (disjoint_compl_left (a := s)) μ |>.trans <|
     measurePreserving_piCongrLeft μ <|
     Equiv.finsetCoeCongr (compl_union_self s) |>.trans Equiv.finsetUniv
@@ -279,7 +278,7 @@ variable (μ) in
 lemma quasiMeasurePreserving_updateFinset [Fintype δ] :
   QuasiMeasurePreserving
     (fun a : ((i : δ) → X i) × ((i : s) → X i) ↦ updateFinset a.1 s a.2)
-    ((Measure.pi μ).prod (Measure.pi (μ ·))) (Measure.pi μ) := by
+    (.prod (.pi μ) (.pi (μ ·))) (.pi μ) := by
   convert quasiMeasurePreserving_fst.comp
     (measurePreserving_piFinsetSwap μ s).quasiMeasurePreserving
   rfl
@@ -287,7 +286,7 @@ lemma quasiMeasurePreserving_updateFinset [Fintype δ] :
 variable (s) in
 lemma _root_.AEMeasurable.comp_updateFinset [Fintype δ] (hf : AEMeasurable f (.pi μ)) :
     AEMeasurable (uncurry (f <| updateFinset · s ·))
-      (Measure.pi μ |>.prod <| Measure.pi (μ ·)) :=
+      (.prod (.pi μ) (.pi (μ ·))) :=
   hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
 
 omit [DecidableEq δ] in
@@ -336,7 +335,7 @@ theorem QuasiMeasurePreserving.piCoe_of_subset {s t : Finset δ} (h : t ⊆ s) :
   classical
   have := QuasiMeasurePreserving.piCoe (fun i : s ↦ μ i)
       (t.attach.map (Subtype.impEmbedding _ _ h))
-  let e : ↥(Finset.map (Subtype.impEmbedding (fun x ↦ x ∈ t) (fun x ↦ x ∈ s) h) t.attach)
+  let e : ↥(Finset.map (Subtype.impEmbedding (· ∈ t) (· ∈ s) h) t.attach)
       ≃ t := by
     convert Equiv.subtypeSubtypeEquivSubtype _ with x
     · grind [Subtype.exists]
@@ -346,20 +345,19 @@ theorem QuasiMeasurePreserving.piCoe_of_subset {s t : Finset δ} (h : t ⊆ s) :
   convert this
   simp
   -- congr!
-  sorry
+  sorry -- only finish if useful
   -- simp
   -- convert quasiMeasurePreserving_snd.comp
   --   (measurePreserving_piFinsetComplUnion (μ := μ) s).symm.quasiMeasurePreserving
   -- rfl
 
 omit [DecidableEq δ] in
--- set_option pp.funBinderTypes true in
 theorem quasiMeasurePreserving_dcomp [Fintype δ] [Fintype δ']
     {e : δ' → δ} (he : Injective e) :
     QuasiMeasurePreserving (fun x : ∀ i, X i ↦ x ∘' e)
     (.pi μ) (.pi fun i' ↦ μ (e i')) := by
   classical
-  have : Measurable (fun x : ∀ i, X i ↦ x ∘' e) :=
+  have : Measurable fun x : ∀ i, X i ↦ x ∘' e :=
     measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
   refine ⟨this, ?_⟩
   refine .mk fun s hs hμs ↦ ?_
@@ -373,16 +371,16 @@ theorem quasiMeasurePreserving_dcomp [Fintype δ] [Fintype δ']
   have e'_def x : (e' x).1 = e x := rfl
   have e'_def' x : e' x = ⟨e x, this x⟩ := rfl
   have e'_symm x : e'.symm ⟨e x, this x⟩ = x := by simp [e', subtypeEquivRight]
-  rw [map_apply sorry sorry, preimage_preimage]
+  rw [map_apply (by fun_prop) (by measurability), preimage_preimage]
   simp_rw [funext (dcomp.eq_1 _ _)]
   simp_rw [MeasurableEquiv.piFinsetComplUnion_apply, piFinsetComplUnion_eq_of_mem (this _)]
   rw [← preimage_preimage
-    (g := (fun (x : ∀ i : Finset.univ.image e, X i) (i : δ') ↦ x ⟨e i, this i⟩)) (f := Prod.snd),
+    (g := fun (x : ∀ i : Finset.univ.image e, X i) (i : δ') ↦ x ⟨e i, this i⟩) (f := Prod.snd),
     ← univ_prod, prod_prod]
   rw [← pi_map_piCongrLeft e' (μ ·), ]
-  rw [map_apply sorry sorry, preimage_preimage]
+  rw [map_apply (by fun_prop) (by measurability), preimage_preimage]
   sorry
-  -- conv => enter [1, 2, 2, 1, x, i]; rw! [← e'_def'] -- kernel error
+  -- conv => enter [1, 2, 2, 1, x, i]; rw! [← e'_def'] -- kernel error, fixed in newer Mathlib
   -- simp_rw [MeasurableEquiv.piCongrLeft_apply_apply]
   -- convert (postTransparency := .default) mul_zero _
 
@@ -407,7 +405,7 @@ end Move
   is the product measure. -/
 def lmarginal (μ : ∀ i, Measure (X i)) (s : Finset δ) (f : (∀ i, X i) → ℝ≥0∞)
     (x : ∀ i, X i) : ℝ≥0∞ :=
-  ∫⁻ y : ∀ i : s, X i, f (updateFinset x s y) ∂Measure.pi fun i : s => μ i
+  ∫⁻ y : ∀ i : s, X i, f (updateFinset x s y) ∂.pi fun i : s ↦ μ i
 
 -- Note: this notation is not a binder. This is more convenient since it returns a function.
 @[inherit_doc]
@@ -424,7 +422,7 @@ theorem _root_.Measurable.lmarginal [∀ i, SigmaFinite (μ i)] (hf : Measurable
 
 @[simp] theorem lmarginal_empty (f : (∀ i, X i) → ℝ≥0∞) : ∫⋯∫⁻_∅, f ∂μ = f := by
   ext1 x
-  simp_rw [lmarginal, Measure.pi_of_empty fun i : (∅ : Finset δ) => μ i]
+  simp_rw [lmarginal, Measure.pi_of_empty fun i : (∅ : Finset δ) ↦ μ i]
   apply lintegral_dirac'
   exact Subsingleton.measurable
 
@@ -455,7 +453,7 @@ theorem lmarginal_update_of_mem {i : δ} (hi : i ∈ s)
 
 variable {μ} in
 theorem lmarginal_singleton (f : (∀ i, X i) → ℝ≥0∞) (i : δ) :
-    ∫⋯∫⁻_{i}, f ∂μ = fun x => ∫⁻ xᵢ, f (Function.update x i xᵢ) ∂μ i := by
+    ∫⋯∫⁻_{i}, f ∂μ = fun x ↦ ∫⁻ xᵢ, f (Function.update x i xᵢ) ∂μ i := by
   let α : Type _ := ({i} : Finset δ)
   let e := (MeasurableEquiv.piUnique fun j : α ↦ X j).symm
   ext1 x
@@ -469,12 +467,12 @@ theorem lmarginal_singleton (f : (∀ i, X i) → ℝ≥0∞) (i : δ) :
 variable {μ} in
 @[gcongr]
 theorem lmarginal_mono {f g : (∀ i, X i) → ℝ≥0∞} (hfg : f ≤ g) : ∫⋯∫⁻_s, f ∂μ ≤ ∫⋯∫⁻_s, g ∂μ :=
-  fun _ => lintegral_mono fun _ => hfg _
+  fun _ ↦ lintegral_mono fun _ ↦ hfg _
 
 variable {μ} in
 theorem lmarginal_eq_zero_iff (hf : Measurable f) :
     (∫⋯∫⁻_s, f ∂μ) x = 0 ↔
-    (fun y : ∀ i : s, X i ↦ f (updateFinset x s y)) =ᵐ[Measure.pi (fun i : s ↦ μ i)] 0 := by
+    (fun y : ∀ i : s, X i ↦ f (updateFinset x s y)) =ᵐ[Measure.pi fun i : s ↦ μ i] 0 := by
   rw [lmarginal, lintegral_eq_zero_iff]
   fun_prop
 
@@ -489,14 +487,14 @@ theorem lmarginal_eq_zero_of_measure_eq_zero {i : δ} (hi : i ∈ s) (h : μ i =
 
 theorem lmarginal_union_ae_apply (f : (∀ i, X i) → ℝ≥0∞)
     {x : (i : δ) → X i}
-    (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (Measure.pi (μ ·)))
+    (hx : AEMeasurable (fun y ↦ f (updateFinset x (s ∪ t) y)) (.pi (μ ·)))
     (hst : Disjoint s t) : (∫⋯∫⁻_s ∪ t, f ∂μ) x = (∫⋯∫⁻_s, ∫⋯∫⁻_t, f ∂μ ∂μ) x := by
   let e := MeasurableEquiv.piFinsetUnion X hst
   calc (∫⋯∫⁻_s ∪ t, f ∂μ) x
       = ∫⁻ (y : (i : ↥(s ∪ t)) → X i), f (updateFinset x (s ∪ t) y)
           ∂.pi fun i' : ↥(s ∪ t) ↦ μ i' := rfl
     _ = ∫⁻ (y : ((i : s) → X i) × ((j : t) → X j)), f (updateFinset x (s ∪ t) _)
-          ∂(Measure.pi fun i : s ↦ μ i).prod (.pi fun j : t ↦ μ j) := by
+          ∂(.prod (.pi fun i : s ↦ μ i) (.pi fun j : t ↦ μ j)) := by
         rw [measurePreserving_piFinsetUnion hst μ |>.lintegral_map_equiv]
     _ = ∫⁻ (y : (i : s) → X i), ∫⁻ (z : (j : t) → X j), f (updateFinset x (s ∪ t) (e (y, z)))
           ∂.pi fun j : t ↦ μ j ∂.pi fun i : s ↦ μ i := by
@@ -521,7 +519,7 @@ theorem lmarginal_union' (f : (∀ i, X i) → ℝ≥0∞) (hf : Measurable f) {
 
 variable (μ) in
 @[simp] theorem lmarginal_univ [Fintype δ] {f : (∀ i, X i) → ℝ≥0∞} :
-    ∫⋯∫⁻_univ, f ∂μ = fun _ => ∫⁻ x, f x ∂Measure.pi μ := by
+    ∫⋯∫⁻_univ, f ∂μ = fun _ ↦ ∫⁻ x, f x ∂.pi μ := by
   let e : { j // j ∈ Finset.univ } ≃ δ := Equiv.subtypeUnivEquiv mem_univ
   ext1 x
   simp_rw [lmarginal, measurePreserving_piCongrLeft μ e |>.lintegral_map_equiv, updateFinset_def]
@@ -535,7 +533,7 @@ variable [Fintype δ]
 values in the remaining arguments. -/
 def AEMeasurableWRT (f : (∀ i, X i) → ℝ≥0∞) (s : Finset δ) (μ : ∀ i, Measure (X i)) :
     Prop :=
-  ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (Measure.pi (μ ·))
+  ∀ᵐ x ∂Measure.pi μ, AEMeasurable (f <| updateFinset x s ·) (.pi (μ ·))
 
 lemma _root_.AEMeasurable.aemeasurableWRT (hf : AEMeasurable f (.pi μ)) :
     AEMeasurableWRT f s μ :=
@@ -546,10 +544,7 @@ theorem AEMeasurableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (
     AEMeasurableWRT (f ∘ (· ∘' e)) (s.image e) μ := by
   have h : Measurable ((· ∘' e) : (∀ i, X i) → _) :=
     measurable_pi_iff.mpr fun i ↦ measurable_pi_apply (e i)
-  have : QuasiMeasurePreserving (fun x : ∀ i, X i ↦ x ∘' e)
-    (Measure.pi μ) (Measure.pi fun i' ↦ μ (e i')) :=
-      sorry
-  filter_upwards [this.ae hf] with x hx
+  filter_upwards [quasiMeasurePreserving_dcomp he |>.ae hf] with x hx
   convert hx.comp_quasiMeasurePreserving
     (f := fun (z : ∀ i : s.image e, X i) (i : s) ↦
       z ⟨e i.1, (Injective.mem_finset_image he).mpr i.2⟩) ?_
@@ -557,7 +552,8 @@ theorem AEMeasurableWRT.image [Fintype δ'] [DecidableEq δ'] {e : δ' → δ} (
     congr
     ext i
     rw [updateFinset_image he]
-  sorry
+  apply quasiMeasurePreserving_dcomp
+  exact Subtype.coind_injective _ <| he.comp Subtype.val_injective
 
 open scoped Set.Notation in
 /-
@@ -579,7 +575,14 @@ Equivalently
 Known: ∀ᵐx, h(g(x, ·)) is a.e. measurable. To prove: ∀ᵐx, h(x, ·) is a.e. measurable, where
 `h = (f <| updateFinset · t ·)`
 Need to somehow encode that `h` doesn't depend on the values in `∀ i : s \ t, X i`.
+
+Up to measurable equivalence:
+[xᵢ ∈ sᶜ, yᵢ ∈ s \ t, zᵢ ∈ t]
+∀ᵐ (x, y, z), AEMeasurable f (x, ·, ·)
+=>
+∀ᵐ (x, y, z), AEMeasurable f (x, y, ·)
 -/
+
 lemma AEMeasurableWRT.mono (hf : AEMeasurableWRT f s μ) (h : t ⊆ s) :
     AEMeasurableWRT f t μ := by
   filter_upwards [hf] with x hx
@@ -602,7 +605,7 @@ lemma aemeasurableWRT_univ_iff [∀ i, NeZero (μ i)] :
   rfl -- simp doesn't like this, since small variations make this reducibly type incorrect.
 
 lemma _root_.AEMeasurable.marginal (hf : AEMeasurable f (.pi μ)) :
-    AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (Measure.pi (μ ·)) := by
+    AEMeasurable (∫⋯∫⁻_ s, f ∂μ) (.pi μ) := by
   apply AEMeasurable.lintegral_prod_right
   exact hf.comp_quasiMeasurePreserving (quasiMeasurePreserving_updateFinset μ)
 
@@ -613,10 +616,10 @@ theorem lmarginal_union_ae (hf : AEMeasurableWRT f (s ∪ t) μ)
   exact lmarginal_union_ae_apply f hx hst
 
 theorem lintegral_eq_lmarginal_univ (x : ∀ i, X i) :
-    ∫⁻ x, f x ∂Measure.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
+    ∫⁻ x, f x ∂.pi μ = (∫⋯∫⁻_univ, f ∂μ) x := by simp
 
 theorem lmarginal_lmarginal_compl (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_s, ∫⋯∫⁻_sᶜ, f ∂μ ∂μ) x = ∫⁻ x, f x ∂.pi μ := by
   by_cases h : ∀ i, NeZero (μ i); swap
   · simp_rw [not_forall, not_neZero] at h
     obtain ⟨i, h⟩ := h
@@ -630,7 +633,7 @@ theorem lmarginal_lmarginal_compl (f : (∀ i, X i) → ℝ≥0∞)
   grind [lmarginal_congr', lmarginal_congr, Finset.mem_compl, DependsOn]
 
 theorem lmarginal_compl_lmarginal (f : (∀ i, X i) → ℝ≥0∞)
-    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂Measure.pi μ := by
+    (hf : AEMeasurable f (.pi μ)) : (∫⋯∫⁻_sᶜ, ∫⋯∫⁻_s, f ∂μ ∂μ) x = ∫⁻ x, f x ∂.pi μ := by
   simpa using lmarginal_lmarginal_compl f hf (s := sᶜ)
 
 end Fintype
@@ -702,14 +705,14 @@ theorem lmarginal_le_of_subset {f g : (∀ i, X i) → ℝ≥0∞} (hst : s ⊆ 
 
 theorem lintegral_eq_of_lmarginal_eq [Fintype δ] (s : Finset δ) {f g : (∀ i, X i) → ℝ≥0∞}
     (hf : Measurable f) (hg : Measurable g) (hfg : ∫⋯∫⁻_s, f ∂μ = ∫⋯∫⁻_s, g ∂μ) :
-    ∫⁻ x, f x ∂Measure.pi μ = ∫⁻ x, g x ∂Measure.pi μ := by
+    ∫⁻ x, f x ∂.pi μ = ∫⁻ x, g x ∂.pi μ := by
   rcases isEmpty_or_nonempty (∀ i, X i) with h | ⟨⟨x⟩⟩
   · simp_rw [lintegral_of_isEmpty]
   simp_rw [lintegral_eq_lmarginal_univ x, lmarginal_eq_of_subset (Finset.subset_univ s) hf hg hfg]
 
 theorem lintegral_le_of_lmarginal_le [Fintype δ] (s : Finset δ) {f g : (∀ i, X i) → ℝ≥0∞}
     (hf : Measurable f) (hg : Measurable g) (hfg : ∫⋯∫⁻_s, f ∂μ ≤ ∫⋯∫⁻_s, g ∂μ) :
-    ∫⁻ x, f x ∂Measure.pi μ ≤ ∫⁻ x, g x ∂Measure.pi μ := by
+    ∫⁻ x, f x ∂.pi μ ≤ ∫⁻ x, g x ∂.pi μ := by
   rcases isEmpty_or_nonempty (∀ i, X i) with h | ⟨⟨x⟩⟩
   · simp_rw [lintegral_of_isEmpty, le_rfl]
   simp_rw [lintegral_eq_lmarginal_univ x, lmarginal_le_of_subset (Finset.subset_univ s) hf hg hfg x]

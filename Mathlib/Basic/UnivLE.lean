@@ -6,6 +6,7 @@ Authors: Kim Morrison
 module
 
 public import Mathlib.Logic.Small.Defs
+public import Mathlib.Tactic.ToAdditive
 
 /-!
 # UnivLE
@@ -64,8 +65,8 @@ theorem Small.trans_univLE (α : Type w) [hα : Small.{u} α] [h : UnivLE.{u, v}
 theorem UnivLE.trans [UnivLE.{u, v}] [UnivLE.{v, w}] : UnivLE.{u, w} where
   small α := Small.trans_univLE α
 
-instance UnivLE.self : UnivLE.{u, u} := ⟨inferInstance⟩
-instance UnivLE.zero : UnivLE.{0, u} := ⟨inferInstance⟩
+@[to_additive_do_translate] instance UnivLE.self : UnivLE.{u, u} := ⟨inferInstance⟩
+@[to_additive_do_translate] instance UnivLE.zero : UnivLE.{0, u} := ⟨inferInstance⟩
 
 /-- This is redundant as an instance given the below. -/
 theorem UnivLE.succ [UnivLE.{u, v}] : UnivLE.{u, v + 1} := @UnivLE.trans _ ⟨inferInstance⟩

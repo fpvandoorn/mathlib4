@@ -345,7 +345,7 @@ lemma ext {X : C} (h₁ h₂ : GrpObj X) (H : h₁.toMonObj = h₂.toMonObj) : h
 
 -- Note: `Invertible` has no additive variant
 /-- A monoid object with invertible homs is a group object. -/
-@[instance_reducible]
+@[to_additive (attr := instance_reducible)]
 def ofInvertible (G : C) [MonObj G] (h : ∀ X (f : X ⟶ G), Invertible f) : GrpObj G where
   inv := Yoneda.fullyFaithful.preimage
     ⟨fun X ↦ ↾fun f ↦ (h X.unop f).invOf, fun X Y f ↦ by

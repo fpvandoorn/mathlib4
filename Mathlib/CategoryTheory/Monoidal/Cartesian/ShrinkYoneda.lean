@@ -28,11 +28,13 @@ open Opposite
 variable {C : Type u} [Category.{v} C] [LocallySmall.{w} C] [CartesianMonoidalCategory C]
 
 set_option backward.defeqAttrib.useBackward true in
+@[to_additive]
 instance (M : Mon C) (X : Cᵒᵖ) : Small.{w} ((yonedaMon.obj M).obj X) := by
   dsimp
   infer_instance
 
 set_option backward.defeqAttrib.useBackward true in
+@[to_additive]
 instance (M : Grp C) (X : Cᵒᵖ) : Small.{w} ((yonedaGrp.obj M).obj X) := by
   dsimp
   infer_instance
@@ -40,7 +42,7 @@ instance (M : Grp C) (X : Cᵒᵖ) : Small.{w} ((yonedaGrp.obj M).obj X) := by
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
 /-- The Yoneda embedding `Mon C ⥤ Cᵒᵖ ⥤ MonCat.{w}` for a locally `w`-small category `C`. -/
-@[simps -isSimp obj map, pp_with_univ]
+@[to_additive (attr := simps -isSimp obj map, pp_with_univ)]
 noncomputable def shrinkYonedaMon :
     Mon C ⥤ Cᵒᵖ ⥤ MonCat.{w} where
   obj X := MonCat.shrinkFunctor (yonedaMon.obj X)
@@ -77,25 +79,28 @@ lemma shrinkYonedaMon_map_app_shrinkYonedaObjObjEquiv_symm
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
 /-- The Yoneda embedding `Grp C ⥤ Cᵒᵖ ⥤ GrpCat.{w}` for a locally `w`-small category `C`. -/
-@[simps -isSimp obj map, pp_with_univ]
+@[to_additive (attr := simps -isSimp obj map, pp_with_univ)]
 noncomputable def shrinkYonedaGrp :
     Grp C ⥤ Cᵒᵖ ⥤ GrpCat.{w} where
   obj X := GrpCat.shrinkFunctor (yonedaGrp.obj X)
   map f := GrpCat.shrinkFunctorMap (yonedaGrp.map f)
 
 /-- The type `(shrinkYonedaGrp.obj M).obj Y` is equivalent to `Y.unop ⟶ M.X`. -/
+@[to_additive]
 noncomputable def shrinkYonedaGrpObjObjEquiv {M : Grp C} {Y : Cᵒᵖ} :
     (shrinkYonedaGrp.{w}.obj M).obj Y ≃* (Y.unop ⟶ M.X) :=
   Shrink.mulEquiv
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
+@[to_additive]
 lemma shrinkYonedaGrp_obj_map_shrinkYonedaGrpObjObjEquiv_symm
     {M : Grp C} {Y Y' : Cᵒᵖ} (g : Y ⟶ Y') (f : Y.unop ⟶ M.X) :
     (shrinkYonedaGrp.{w}.obj _).map g (shrinkYonedaGrpObjObjEquiv.symm f) =
       shrinkYonedaGrpObjObjEquiv.symm (g.unop ≫ f) := by
   simp [shrinkYonedaGrp, shrinkYonedaGrpObjObjEquiv]
 
+@[to_additive]
 lemma shrinkYonedaGrpObjObjEquiv_symm_comp {M : Grp C} {Y Y' : C} (g : Y' ⟶ Y) (f : Y ⟶ M.X) :
     shrinkYonedaGrpObjObjEquiv.symm (g ≫ f) =
     (shrinkYonedaGrp.obj _).map g.op (shrinkYonedaGrpObjObjEquiv.symm f) :=
@@ -103,6 +108,7 @@ lemma shrinkYonedaGrpObjObjEquiv_symm_comp {M : Grp C} {Y Y' : C} (g : Y' ⟶ Y)
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
+@[to_additive]
 lemma shrinkYonedaGrp_map_app_shrinkYonedaObjObjEquiv_symm
     {M M' : Grp C} {Y : Cᵒᵖ} (f : Y.unop ⟶ M.X) (g : M ⟶ M') :
     (shrinkYonedaGrp.map g).app _ (shrinkYonedaGrpObjObjEquiv.symm f) =

@@ -23,13 +23,13 @@ open CategoryTheory
 
 variable {C : Type u} [Category.{v} C]
 
-instance (F : C ⥤ MonCat.{w'}) [∀ X, Small.{w} (F.obj X)] :
+@[to_additive] instance (F : C ⥤ MonCat.{w'}) [∀ X, Small.{w} (F.obj X)] :
     FunctorToTypes.Small.{w} (F ⋙ forget _) :=
   fun X ↦ inferInstanceAs <| Small.{w} (F.obj X)
 
 /-- A functor `F : C ⥤ MonCat.{w'}` factors through `MonCat.{w}` if all the
 monoids are `w`-small. -/
-@[simps, pp_with_univ]
+@[to_additive (attr := simps, pp_with_univ)]
 noncomputable def MonCat.shrinkFunctor (F : C ⥤ MonCat.{w'}) [∀ X, Small.{w} (F.obj X)] :
     C ⥤ MonCat.{w} where
   obj X := ↧(Shrink.{w} (F.obj X))
@@ -38,7 +38,7 @@ noncomputable def MonCat.shrinkFunctor (F : C ⥤ MonCat.{w'}) [∀ X, Small.{w}
 
 /-- The natural transformation `MonCat.shrinkFunctor.{w} F ⟶ MonCat.shrinkFunctor.{w} G`
 induces by a natural transformation `τ : F ⟶ G` between `w`-small functors to monoids. -/
-@[simps]
+@[to_additive (attr := simps)]
 noncomputable def MonCat.shrinkFunctorMap {F G : C ⥤ MonCat.{w'}} (τ : F ⟶ G)
     [∀ X, Small.{w} (F.obj X)] [∀ X, Small.{w} (G.obj X)] :
     MonCat.shrinkFunctor.{w} F ⟶ MonCat.shrinkFunctor.{w} G where

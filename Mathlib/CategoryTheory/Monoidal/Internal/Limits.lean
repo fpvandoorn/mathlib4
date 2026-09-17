@@ -41,7 +41,7 @@ set_option backward.isDefEq.respectTransparency false in
 We construct the limit object of a functor `F : J ⥤ Mon C` given a limit cone `c` of
 `F ⋙ forget C`.
 -/
-@[simps!]
+@[to_additive (attr := simps!)]
 def limit (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) :
     Mon C where
   X := c.pt
@@ -62,7 +62,7 @@ def limit (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) :
 set_option backward.isDefEq.respectTransparency false in
 /-- Implementation of `Mon.hasLimits`: a limiting cone over a functor `F : J ⥤ Mon C`.
 -/
-@[simps]
+@[to_additive (attr := simps)]
 def limitCone (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) : Cone F where
   pt := limit F c hc
   π.app j := .mk' (c.π.app j)
@@ -73,7 +73,7 @@ set_option backward.defeqAttrib.useBackward true in
 /-- The image of the proposed limit cone for `F : J ⥤ Mon C` under the forgetful functor
 `forget C : Mon C ⥤ C` is isomorphic to the limit cone of `F ⋙ forget C`.
 -/
-@[simps!]
+@[to_additive (attr := simps!)]
 def forgetMapConeLimitConeIso (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) :
     (forget C).mapCone (limitCone F c hc) ≅ c :=
   Cone.ext (Iso.refl _) (by simp)
@@ -83,7 +83,7 @@ set_option backward.isDefEq.respectTransparency false in
 /-- Implementation of `Mon.hasLimitsOfShape`:
 the proposed cone over a functor `F : J ⥤ Mon C` is a limit cone.
 -/
-@[simps]
+@[to_additive (attr := simps)]
 def limitConeIsLimit (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) :
     IsLimit (limitCone F c hc) where
   lift s :=
@@ -97,23 +97,25 @@ def limitConeIsLimit (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsL
 A helper definition to show that the forgetful functor `forget C : Mon C ⥤ C` creates limits:
 given a limit cone `c` of `F ⋙ forget C`, we can lift it to a limit cone of `F`.
 -/
+@[to_additive]
 def limitConeLiftsToLimit (F : J ⥤ Mon C) (c : Cone (F ⋙ Mon.forget C)) (hc : IsLimit c) :
     LiftsToLimit F (forget C) c hc where
   liftedCone := limitCone F c hc
   validLift := forgetMapConeLimitConeIso _ _ _
   makesLimit := limitConeIsLimit _ _ _
 
+@[to_additive]
 instance (F : J ⥤ Mon C) : CreatesLimit F (forget C) :=
   createsLimitOfReflectsIso (limitConeLiftsToLimit _)
 
-instance : CreatesLimitsOfShape J (forget C) := ⟨inferInstance⟩
-instance : CreatesLimitsOfSize.{w} (forget C) := ⟨inferInstance⟩
-instance : CreatesLimits (forget C) := ⟨inferInstance⟩
+@[to_additive] instance : CreatesLimitsOfShape J (forget C) := ⟨inferInstance⟩
+@[to_additive] instance : CreatesLimitsOfSize.{w} (forget C) := ⟨inferInstance⟩
+@[to_additive] instance : CreatesLimits (forget C) := ⟨inferInstance⟩
 
-instance [HasLimitsOfShape J C] : HasLimitsOfShape J (Mon C) :=
+@[to_additive] instance [HasLimitsOfShape J C] : HasLimitsOfShape J (Mon C) :=
   hasLimitsOfShape_of_hasLimitsOfShape_createsLimitsOfShape (forget C)
 
-instance [HasLimitsOfShape J C] :
+@[to_additive] instance [HasLimitsOfShape J C] :
     PreservesLimitsOfShape J (Mon.forget C) :=
   CategoryTheory.preservesLimitOfShape_of_createsLimitsOfShape_and_hasLimitsOfShape _
 

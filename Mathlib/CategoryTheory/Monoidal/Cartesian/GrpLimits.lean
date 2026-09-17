@@ -27,12 +27,14 @@ universe w v
 variable {C : Type*} [Category.{v} C] [CartesianMonoidalCategory C]
   {J : Type w} [Category J] [HasLimitsOfShape J C]
 
+@[to_additive]
 instance : PreservesLimitsOfShape J (shrinkYonedaMon.{max w v} (C := C)) :=
   have : PreservesLimitsOfShape J (shrinkYonedaMon ⋙ (whiskeringRight _ _ _).obj (forget MonCat)) :=
     (inferInstance : PreservesLimitsOfShape J (Mon.forget C ⋙ shrinkYoneda.{max w v}))
   preservesLimitsOfShape_of_reflects_of_preserves _ ((whiskeringRight _ _ _).obj (forget MonCat))
 
 /-- An auxiliary construction in order to prove that `Grp.forget₂Mon` creates limits. -/
+-- @[to_additive]
 noncomputable def Grp.limitAux (F : J ⥤ Grp C) : Grp C where
   X := (limit (F ⋙ forget₂Mon C)).X
   grp := GrpObj.ofInvertible (limit (F ⋙ forget₂Mon C)).X fun X f ↦
